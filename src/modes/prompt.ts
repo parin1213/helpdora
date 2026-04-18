@@ -1,8 +1,10 @@
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions.js";
 import type { Dora } from "../llm.js";
+import type { Config } from "../config.js";
 import { fetchHelp, CommandNotFoundError, HelpNotFoundError } from "../help-fetcher.js";
 import { PromptAnswer, type PromptAnswerT } from "../schemas.js";
 import { ThinkingSpinner, writeCaveat, writeCommandBox, writeDebug, writeDim, writeLine } from "../render.js";
+import { cacheKey, cacheRead, cacheWrite, type CacheOptions } from "../cache.js";
 import pc from "picocolors";
 
 const SYSTEM_PROMPT = `あなたはシェル/Unix コマンドのエキスパートです。
@@ -18,6 +20,20 @@ const SYSTEM_PROMPT = `あなたはシェル/Unix コマンドのエキスパー
 - explanation, caveats, alternatives[].when は日本語で
 - 情報源（ヘルプを実際に読んだ場合）を sources に記録する（例: "tar --help"）
 - alternatives には「主コマンドの微調整版」ではなく「明確に異なるユースケース」向けの代替のみ入れる`;
+
+const DORA_TONE_APPEND = `
+
+# 口調指定: ドラえもん
+explanation / caveats / alternatives[].when をドラえもん口調で書く:
+- 一人称「ぼく」、二人称「きみ」
+- 文末「〜だよ」「〜なんだ」「〜しよう」「〜のさ」「〜ね」
+- 「やれやれ」「どうしたの」「バカだなあ」を自然な位置で時々（多用禁止）
+- 丁寧語（です・ます）は使わない
+- command 値自体は当然ながら**そのまま**（口調変換の対象外）`;
+
+function systemPromptFor(tone: "default" | "dora" | undefined): string {
+  return tone === "dora" ? SYSTEM_PROMPT + DORA_TONE_APPEND : SYSTEM_PROMPT;
+}
 
 const TOOL_GET_HELP: ChatCompletionTool = {
   type: "function",
@@ -51,6 +67,9 @@ export interface PromptOptions {
   maxToolCalls?: number;
   ctx?: readonly string[];
   debug?: boolean;
+  tone?: "default" | "dora";
+  cache?: CacheOptions;
+  cfg?: Config;
 }
 
 interface ToolCallArgs {
@@ -65,22 +84,46 @@ export async function promptMode(
   opts: PromptOptions,
 ): Promise<PromptAnswerT> {
   const useTools = opts.useTools !== false;
-  const cache = new Map<string, string>();
+  const helpCache = new Map<string, string>();
+  const tone = opts.tone ?? "default";
 
   const messages: ChatCompletionMessageParam[] = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: systemPromptFor(tone) },
     { role: "user", content: question },
   ];
 
   // --ctx で指定されたコマンドのヘルプを事前注入（ツール呼び出し数を削減）
   if (opts.ctx && opts.ctx.length > 0) {
     for (const cmd of opts.ctx) {
-      const result = await runGetHelp(cmd, [], "auto", cache);
+      const result = await runGetHelp(cmd, [], "auto", helpCache);
       if (opts.debug) writeDebug(`preloaded ${cmd} → ${result.length} chars`);
       messages.push({
         role: "system",
         content: `参考情報（事前ロード: ${cmd} のヘルプ）:\n${result}`,
       });
+    }
+  }
+
+  // Answer cache. Includes ctx content in the key so changing preloaded
+  // help invalidates prior cached answers for the same question.
+  const cacheOpts = opts.cache ?? {};
+  const answerKey = cacheKey([
+    "prompt",
+    opts.cfg?.model ?? "",
+    opts.cfg?.baseUrl ?? "",
+    tone,
+    useTools,
+    question,
+    Array.from(opts.ctx ?? []),
+  ]);
+  const cached = cacheRead(answerKey, cacheOpts);
+  if (cached) {
+    try {
+      const parsed = PromptAnswer.parse(JSON.parse(cached));
+      if (opts.debug) writeDebug(`cache hit: key=${answerKey}`);
+      return parsed;
+    } catch {
+      // malformed cache entry → fall through to regenerate
     }
   }
 
@@ -91,7 +134,7 @@ export async function promptMode(
       schema: PromptAnswer,
       schemaName: "command_suggestion",
       tools: useTools ? [TOOL_GET_HELP] : undefined,
-      handleTool: useTools ? (call) => handleToolCall(call, cache, opts.debug) : undefined,
+      handleTool: useTools ? (call) => handleToolCall(call, helpCache, opts.debug) : undefined,
       maxToolCalls: opts.maxToolCalls,
       debug: opts.debug
         ? {
@@ -106,6 +149,8 @@ export async function promptMode(
         : undefined,
     });
 
+    cacheWrite(answerKey, JSON.stringify(parsed), cacheOpts);
+    if (opts.debug) writeDebug(`cached: key=${answerKey}`);
     return parsed;
   } finally {
     spinner.stop();

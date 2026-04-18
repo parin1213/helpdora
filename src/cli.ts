@@ -33,6 +33,9 @@ interface RootOptions {
   tools?: boolean;
   maxToolCalls?: string;
   thinkBypass?: boolean;
+  dora?: boolean;
+  cache?: boolean;
+  refresh?: boolean;
 }
 
 const program = new Command();
@@ -54,6 +57,9 @@ program
   .addOption(new Option("--no-tools", "-p モードで LLM のツール呼び出しを無効化"))
   .option("--max-tool-calls <n>", "-p モードでのツール呼び出し上限", "4")
   .addOption(new Option("--no-think-bypass", "翻訳モードで /v1/completions 経由の思考バイパスを無効化"))
+  .option("--dora", "ドラえもん口調で出力する")
+  .addOption(new Option("--no-cache", "キャッシュを一切使わない（読み書きとも無効）"))
+  .option("--refresh", "キャッシュを無視してLLMを再実行し、結果を上書き保存")
   .action(async (cmdAndArgs: string[], opts: RootOptions) => {
     await runRoot(cmdAndArgs, opts);
   });
@@ -66,6 +72,38 @@ program
   .action((o: { force?: boolean; dir?: string }) => {
     const code = installSkill(o);
     process.exit(code);
+  });
+
+program
+  .command("cache")
+  .argument("<action>", "list | clear | path")
+  .description("LLM レスポンスキャッシュ (~/.cache/dora) の管理")
+  .action(async (action: string) => {
+    const { cacheList, cacheClear, cachePath } = await import("./cache.js");
+    if (action === "path") {
+      process.stdout.write(cachePath() + "\n");
+      return;
+    }
+    if (action === "list") {
+      const entries = cacheList();
+      if (entries.length === 0) {
+        process.stdout.write("(empty)\n");
+        return;
+      }
+      const total = entries.reduce((a, e) => a + e.bytes, 0);
+      for (const e of entries) {
+        process.stdout.write(`${e.mtime.toISOString()}  ${String(e.bytes).padStart(6)} B  ${e.key}\n`);
+      }
+      process.stdout.write(`---\ntotal: ${entries.length} entries, ${total} bytes\n`);
+      return;
+    }
+    if (action === "clear") {
+      const n = cacheClear();
+      process.stdout.write(`removed ${n} entries\n`);
+      return;
+    }
+    writeError(`unknown action: ${action} (expected: list | clear | path)`);
+    process.exit(64);
   });
 
 function collect(v: string, prev: string[]): string[] {
@@ -93,6 +131,9 @@ async function runRoot(cmdAndArgs: string[], opts: RootOptions): Promise<void> {
         maxToolCalls: Number.isFinite(maxToolCalls) && maxToolCalls > 0 ? maxToolCalls : 4,
         ctx: opts.ctx,
         debug: opts.debug,
+        tone: opts.dora ? "dora" : "default",
+        cache: { disabled: opts.cache === false, refresh: opts.refresh },
+        cfg,
       });
       renderAnswer(ans);
       return;
@@ -114,6 +155,8 @@ async function runRoot(cmdAndArgs: string[], opts: RootOptions): Promise<void> {
       stream: opts.stream,
       debug: opts.debug,
       bypassThinking: opts.thinkBypass,
+      tone: opts.dora ? "dora" : "default",
+      cache: { disabled: opts.cache === false, refresh: opts.refresh },
     });
   } catch (e) {
     handleError(e);
