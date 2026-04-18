@@ -31,7 +31,7 @@ export interface StructuredOptions<T extends z.ZodTypeAny> {
   debug?: DebugHook;
 }
 
-export class Manju {
+export class Dora {
   private client: OpenAI;
 
   constructor(private cfg: Config) {

@@ -1,10 +1,10 @@
 {
-  "name": "manju",
-  "version": "0.1.0",
+  "name": "dora",
+  "version": "0.2.0",
   "description": "Translate command --help / man to Japanese, or ask in natural language — via LM Studio or any OpenAI-compatible endpoint.",
   "type": "module",
   "bin": {
-    "manju": "./dist/cli.js"
+    "dora": "./dist/cli.js"
   },
   "files": [
     "dist"

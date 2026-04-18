@@ -24,17 +24,17 @@ const DEFAULTS: Config = {
 
 export function configPath(env: NodeJS.ProcessEnv = process.env): string {
   const xdg = env.XDG_CONFIG_HOME || join(homedir(), ".config");
-  return join(xdg, "manju", "config.json");
+  return join(xdg, "dora", "config.json");
 }
 
 export function loadConfig(cli: ConfigOverrides = {}, env: NodeJS.ProcessEnv = process.env): Config {
   const file = readConfigFile(configPath(env));
   const envCfg: Partial<Config> = {};
-  if (env.MANJU_BASE_URL) envCfg.baseUrl = env.MANJU_BASE_URL;
-  if (env.MANJU_API_KEY) envCfg.apiKey = env.MANJU_API_KEY;
-  if (env.MANJU_MODEL) envCfg.model = env.MANJU_MODEL;
-  if (env.MANJU_TIMEOUT_MS) {
-    const n = Number(env.MANJU_TIMEOUT_MS);
+  if (env.DORA_BASE_URL) envCfg.baseUrl = env.DORA_BASE_URL;
+  if (env.DORA_API_KEY) envCfg.apiKey = env.DORA_API_KEY;
+  if (env.DORA_MODEL) envCfg.model = env.DORA_MODEL;
+  if (env.DORA_TIMEOUT_MS) {
+    const n = Number(env.DORA_TIMEOUT_MS);
     if (Number.isFinite(n) && n > 0) envCfg.timeoutMs = n;
   }
 

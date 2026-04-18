@@ -1,5 +1,5 @@
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions.js";
-import type { Manju } from "../llm.js";
+import type { Dora } from "../llm.js";
 import { fetchHelp, CommandNotFoundError, HelpNotFoundError } from "../help-fetcher.js";
 import { PromptAnswer, type PromptAnswerT } from "../schemas.js";
 import { ThinkingSpinner, writeCaveat, writeCommandBox, writeDebug, writeDim, writeLine } from "../render.js";
@@ -60,7 +60,7 @@ interface ToolCallArgs {
 }
 
 export async function promptMode(
-  manju: Manju,
+  dora: Dora,
   question: string,
   opts: PromptOptions,
 ): Promise<PromptAnswerT> {
@@ -87,7 +87,7 @@ export async function promptMode(
   const spinner = new ThinkingSpinner();
   spinner.start("コマンド考案中");
   try {
-    const { parsed } = await manju.structured(messages, {
+    const { parsed } = await dora.structured(messages, {
       schema: PromptAnswer,
       schemaName: "command_suggestion",
       tools: useTools ? [TOOL_GET_HELP] : undefined,

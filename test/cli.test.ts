@@ -24,7 +24,7 @@ describe("cli", () => {
   it("--help shows usage", () => {
     const r = run(["--help"]);
     expect(r.code).toBe(0);
-    expect(r.stdout).toContain("manju");
+    expect(r.stdout).toContain("dora");
     expect(r.stdout).toContain("--prompt");
     expect(r.stdout).toContain("install-skill");
   });
@@ -41,26 +41,26 @@ describe("cli", () => {
   });
 
   it("install-skill --dir writes SKILL.md", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "manju-skill-"));
+    const tmp = mkdtempSync(join(tmpdir(), "dora-skill-"));
     try {
       const r = run(["install-skill", "--dir", tmp]);
       expect(r.code).toBe(0);
-      const f = join(tmp, "manju", "SKILL.md");
+      const f = join(tmp, "dora", "SKILL.md");
       expect(existsSync(f)).toBe(true);
       const body = readFileSync(f, "utf8");
-      expect(body).toContain("name: manju");
-      expect(body).toContain("/manju");
+      expect(body).toContain("name: dora");
+      expect(body).toContain("/dora");
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
   });
 
   it("install-skill refuses to overwrite without --force", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "manju-skill-"));
+    const tmp = mkdtempSync(join(tmpdir(), "dora-skill-"));
     try {
       run(["install-skill", "--dir", tmp]);
       // Tweak the installed file so the idempotent-reinstall path doesn't short-circuit
-      const f = join(tmp, "manju", "SKILL.md");
+      const f = join(tmp, "dora", "SKILL.md");
       const original = readFileSync(f, "utf8");
       require("node:fs").writeFileSync(f, original + "\n# edited\n", "utf8");
       const r2 = run(["install-skill", "--dir", tmp]);

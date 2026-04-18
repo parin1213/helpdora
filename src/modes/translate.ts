@@ -1,4 +1,4 @@
-import type { Manju } from "../llm.js";
+import type { Dora } from "../llm.js";
 import type { Config } from "../config.js";
 import type { HelpResult } from "../help-fetcher.js";
 import { fetchHelp } from "../help-fetcher.js";
@@ -35,7 +35,7 @@ export interface TranslateOptions {
 }
 
 export async function translate(
-  manju: Manju,
+  dora: Dora,
   cfg: Config,
   cmd: string,
   args: readonly string[],
@@ -100,13 +100,13 @@ export async function translate(
     let reasoningStarted = false;
     if (opts.stream === false) {
       let all = "";
-      for await (const ev of manju.streamChat(messages, debugHook(opts.debug))) {
+      for await (const ev of dora.streamChat(messages, debugHook(opts.debug))) {
         if (ev.kind === "content") all += ev.text;
       }
       emitChunk(all);
       finishContent();
     } else {
-      for await (const ev of manju.streamChat(messages, debugHook(opts.debug))) {
+      for await (const ev of dora.streamChat(messages, debugHook(opts.debug))) {
         if (ev.kind === "reasoning") {
           if (!reasoningStarted) {
             process.stderr.write("\n");

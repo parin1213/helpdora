@@ -14,7 +14,7 @@ process.stdout.on("error", (err: NodeJS.ErrnoException) => {
 process.stderr.on("error", () => {
   /* same reason; silent */
 });
-import { Manju } from "./llm.js";
+import { Dora } from "./llm.js";
 import { translate } from "./modes/translate.js";
 import { promptMode, renderAnswer } from "./modes/prompt.js";
 import { installSkill } from "./modes/install-skill.js";
@@ -38,11 +38,11 @@ interface RootOptions {
 const program = new Command();
 
 program
-  .name("manju")
+  .name("dora")
   .description("コマンドの --help / man を日本語訳、または自然言語からコマンドを逆引きする CLI (LM Studio 互換)")
   .version(readVersion(), "-V, --version", "バージョンを表示")
   .helpOption("-h, --help", "このヘルプを表示")
-  .argument("[cmd-and-args...]", "翻訳対象のコマンドと引数 (例: `manju git commit`)")
+  .argument("[cmd-and-args...]", "翻訳対象のコマンドと引数 (例: `dora git commit`)")
   .option("-p, --prompt <question>", "自然言語の質問からコマンドを逆引きする")
   .option("--man", "ヘルプ取得元を `man` に強制")
   .option("--raw", "翻訳の下に原文も併記")
@@ -60,7 +60,7 @@ program
 
 program
   .command("install-skill")
-  .description("Claude Code 用のスキルファイル (~/.claude/skills/manju/SKILL.md) をインストール")
+  .description("Claude Code 用のスキルファイル (~/.claude/skills/dora/SKILL.md) をインストール")
   .option("-f, --force", "既存ファイルを上書きする")
   .option("--dir <path>", "スキルをインストールするディレクトリを上書き (default: ~/.claude/skills)")
   .action((o: { force?: boolean; dir?: string }) => {
@@ -78,7 +78,7 @@ async function runRoot(cmdAndArgs: string[], opts: RootOptions): Promise<void> {
   if (opts.baseUrl) cliCfg.baseUrl = opts.baseUrl;
 
   const cfg = loadConfig(cliCfg);
-  const manju = new Manju(cfg);
+  const dora = new Dora(cfg);
 
   const maxToolCalls = Number(opts.maxToolCalls ?? "4");
 
@@ -88,7 +88,7 @@ async function runRoot(cmdAndArgs: string[], opts: RootOptions): Promise<void> {
         writeError("-p と <cmd> は同時に指定できません");
         process.exit(64);
       }
-      const ans = await promptMode(manju, opts.prompt, {
+      const ans = await promptMode(dora, opts.prompt, {
         useTools: opts.tools !== false,
         maxToolCalls: Number.isFinite(maxToolCalls) && maxToolCalls > 0 ? maxToolCalls : 4,
         ctx: opts.ctx,
@@ -108,7 +108,7 @@ async function runRoot(cmdAndArgs: string[], opts: RootOptions): Promise<void> {
       program.outputHelp();
       return;
     }
-    await translate(manju, cfg, cmd, rest, {
+    await translate(dora, cfg, cmd, rest, {
       man: opts.man,
       raw: opts.raw,
       stream: opts.stream,
