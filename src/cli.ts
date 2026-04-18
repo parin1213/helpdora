@@ -3,6 +3,17 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig, type ConfigOverrides } from "./config.js";
+
+// Graceful exit when downstream (e.g. `less` closing on `q`) breaks the
+// pipe. Without this, any in-flight process.stdout.write() throws EPIPE
+// and crashes Node with a stack trace.
+process.stdout.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EPIPE") process.exit(0);
+  throw err;
+});
+process.stderr.on("error", () => {
+  /* same reason; silent */
+});
 import { Manju } from "./llm.js";
 import { translate } from "./modes/translate.js";
 import { promptMode, renderAnswer } from "./modes/prompt.js";
