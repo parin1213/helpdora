@@ -54,12 +54,19 @@ export class Dora {
     // Premium providers don't stream — run the subprocess to completion and
     // emit the whole response in one content chunk. A spinner is shown
     // meanwhile so the user has visible feedback.
+    //
+    // Subprocess providers need a much longer deadline than the default
+    // `timeoutMs` (120s), which is sized for fast local API calls. A
+    // FULL-mode translation of a 77KB man page through `claude -p` can
+    // easily run 3-5 minutes; kill early = lost output. Bound to at least
+    // 15 min.
     if (this.cfg.provider === "claude" || this.cfg.provider === "codex") {
+      const subprocessTimeout = Math.max(this.cfg.timeoutMs, 15 * 60 * 1000);
       const spinner = new ThinkingSpinner();
       spinner.start(`${this.cfg.provider} 思考中`);
       try {
         const prompt = flattenMessages(messages);
-        const text = await runProvider(this.cfg.provider, prompt, this.cfg.timeoutMs);
+        const text = await runProvider(this.cfg.provider, prompt, subprocessTimeout);
         opts.debug?.onTokenStats?.({ elapsedMs: Date.now() - t0 });
         yield { kind: "content", text };
       } finally {
