@@ -84,14 +84,20 @@ export async function summary(
   const useBypass =
     (opts.bypassThinking ?? true) && cfg.provider === "lm-studio" && isSupportedModel(cfg.model);
 
-  const cacheKeyFor = (h: HelpResult): string =>
-    cacheKey(
-      ["summary", cfg.provider, cfg.model, cfg.baseUrl, tone, useBypass, h.source, h.text],
-      `summary--${cfg.provider}--${[cmd, ...args].join("_")}`,
-    );
+  // NOTE: help.text is intentionally excluded from the cache key. If it
+  // were included, the 28KB-first / 14KB-retry flow below would write to
+  // a different key than the key we probe on the next call, forcing a
+  // rerun of the LLM every time for big-help commands (rg, git diff).
+  // help.source stays in the key so `--help` vs `man` vs `-h` invalidate.
+  // Use `--refresh` to force regeneration if the help text genuinely
+  // changes (e.g., after upgrading the underlying binary).
+  const cacheK = cacheKey(
+    ["summary", cfg.provider, cfg.model, cfg.baseUrl, tone, useBypass, help.source],
+    `summary--${cfg.provider}--${[cmd, ...args].join("_")}`,
+  );
   const cacheOpts = opts.cache ?? {};
 
-  const hit = cacheRead(cacheKeyFor(help), cacheOpts);
+  const hit = cacheRead(cacheK, cacheOpts);
   if (!opts.quiet) {
     const header = `# ${[cmd, ...args].join(" ")} — 要点 (source: ${help.source}${hit ? ", cached" : ""})`;
     writeDim(header);
@@ -109,6 +115,7 @@ export async function summary(
     opts.onComplete?.({ cacheHit: true, bytes: hit.length });
     return;
   }
+
 
   if (opts.debug) {
     writeDebug(`thinking bypass: ${useBypass ? "on" : "off"} | tone=${tone}`);
@@ -134,7 +141,7 @@ export async function summary(
   }
 
   if (accumulator.trim().length > 30) {
-    cacheWrite(cacheKeyFor(help), accumulator, cacheOpts);
+    cacheWrite(cacheK, accumulator, cacheOpts);
     if (opts.debug) writeDebug(`cached: bytes=${accumulator.length}`);
   }
 

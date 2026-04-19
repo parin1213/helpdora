@@ -72,8 +72,11 @@ export async function translate(
 
   const useBypass =
     (opts.bypassThinking ?? true) && cfg.provider === "lm-studio" && isSupportedModel(cfg.model);
+  // Exclude help.text from the key so minor help-text drift across
+  // machines/versions doesn't force needless regeneration. help.source
+  // stays (swapping between `--help` and `man` should invalidate).
   const cacheK = cacheKey(
-    ["translate", cfg.provider, cfg.model, cfg.baseUrl, tone, useBypass, help.source, help.text],
+    ["translate", cfg.provider, cfg.model, cfg.baseUrl, tone, useBypass, help.source],
     `full--${cfg.provider}--${[cmd, ...args].join("_")}`,
   );
   const cacheOpts = opts.cache ?? {};

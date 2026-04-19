@@ -84,41 +84,11 @@ export async function promptMode(
   const helpCache = new Map<string, string>();
   const tone = opts.tone ?? "default";
 
-  const messages: ChatCompletionMessageParam[] = [
-    { role: "system", content: systemPromptFor(tone, Boolean(opts.targetCmd)) },
-    { role: "user", content: question },
-  ];
-
-  // INTENT モード: 使用するコマンドが確定しているので、そのヘルプを事前注入し
-  // システム指示で「このコマンドを使え」と明示する。
-  if (opts.targetCmd) {
-    const { cmd, args } = opts.targetCmd;
-    const result = await runGetHelp(cmd, args, "auto", helpCache);
-    if (opts.debug) writeDebug(`target cmd: ${[cmd, ...args].join(" ")} → ${result.length} chars`);
-    const label = [cmd, ...args].join(" ");
-    messages.push({
-      role: "system",
-      content: `ユーザーは **${label}** を使う前提で質問しています。
-他のコマンドで代替提案しないこと（どうしても不適切な場合のみ caveats で言及）。
-以下が ${label} のヘルプ本文です:
-${result}`,
-    });
-  }
-
-  // --ctx で指定されたコマンドのヘルプを事前注入（ツール呼び出し数を削減）
-  if (opts.ctx && opts.ctx.length > 0) {
-    for (const cmd of opts.ctx) {
-      const result = await runGetHelp(cmd, [], "auto", helpCache);
-      if (opts.debug) writeDebug(`preloaded ${cmd} → ${result.length} chars`);
-      messages.push({
-        role: "system",
-        content: `参考情報（事前ロード: ${cmd} のヘルプ）:\n${result}`,
-      });
-    }
-  }
-
-  // Answer cache. Includes ctx content in the key so changing preloaded
-  // help invalidates prior cached answers for the same question.
+  // Answer-cache check goes FIRST — before the targetCmd / ctx help
+  // preload. Otherwise warm INTENT invocations still pay the full help-
+  // fetch cost (man startup, shell lookup, etc.) per call even when the
+  // answer is already cached. Key doesn't depend on help content so we
+  // can compute it before any fetch.
   const cacheOpts = opts.cache ?? {};
   const provider = opts.cfg?.provider ?? "lm-studio";
   const base = opts.targetCmd
@@ -147,6 +117,39 @@ ${result}`,
       return parsed;
     } catch {
       // malformed cache entry → fall through to regenerate
+    }
+  }
+
+  const messages: ChatCompletionMessageParam[] = [
+    { role: "system", content: systemPromptFor(tone, Boolean(opts.targetCmd)) },
+    { role: "user", content: question },
+  ];
+
+  // INTENT モード: 使用するコマンドが確定しているので、そのヘルプを事前注入し
+  // システム指示で「このコマンドを使え」と明示する。
+  if (opts.targetCmd) {
+    const { cmd, args } = opts.targetCmd;
+    const result = await runGetHelp(cmd, args, "auto", helpCache);
+    if (opts.debug) writeDebug(`target cmd: ${[cmd, ...args].join(" ")} → ${result.length} chars`);
+    const lbl = [cmd, ...args].join(" ");
+    messages.push({
+      role: "system",
+      content: `ユーザーは **${lbl}** を使う前提で質問しています。
+他のコマンドで代替提案しないこと（どうしても不適切な場合のみ caveats で言及）。
+以下が ${lbl} のヘルプ本文です:
+${result}`,
+    });
+  }
+
+  // --ctx で指定されたコマンドのヘルプを事前注入（ツール呼び出し数を削減）
+  if (opts.ctx && opts.ctx.length > 0) {
+    for (const cmd of opts.ctx) {
+      const result = await runGetHelp(cmd, [], "auto", helpCache);
+      if (opts.debug) writeDebug(`preloaded ${cmd} → ${result.length} chars`);
+      messages.push({
+        role: "system",
+        content: `参考情報（事前ロード: ${cmd} のヘルプ）:\n${result}`,
+      });
     }
   }
 
