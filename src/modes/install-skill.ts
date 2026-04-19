@@ -64,6 +64,19 @@ dora は引数から自動で以下のモードを選ぶ:
 | LOOKUP  | \`/dora "tarで解凍"\`            | 自然言語からコマンドを逆引き   |
 | FULL    | \`/dora --full ls\`              | 全オプションの逐語訳           |
 
+## 主なオプション
+
+- \`--dora\` ドラえもん口調
+- \`--provider lm-studio|claude|codex\` プロバイダ切り替え（claude/codex は SUMMARY/FULL のみ、INTENT/LOOKUP は lm-studio 必須）
+- \`--man\` / \`--raw\` / \`--no-stream\` / \`--no-cache\` / \`--refresh\`
+
+## サブコマンド
+
+- \`/dora cache list|clear|path [pattern]\` キャッシュ管理（\`clear <pattern>\` で部分一致削除）
+- \`/dora precache\` 履歴から頻出コマンドを事前キャッシュ。\`/dora precache <cmd> [sub]\` で直接指定も可。\`--tone dora\` / \`--mode full\` / \`--all\`、\`--provider\` 継承
+- \`/dora completion zsh\` zsh 補完スクリプト（fzf-tab 対応）
+- \`/dora install-skill\` このスキルファイル自体の再インストール
+
 ## 実行方法
 
 Bash ツールで以下を実行し、\`stdout\` をそのままユーザーに提示する:
@@ -76,19 +89,22 @@ dora <ユーザーが渡した全引数>
 \`dora\` の終了コード:
 - \`0\`: 成功
 - \`1\`: コマンドが見つからない／ヘルプが取得できない
-- \`2\`: LLM 接続エラー（LM Studio サーバ未起動など）
+- \`2\`: LLM 接続エラー（LM Studio サーバ未起動 / 空応答でコンテキスト超過の可能性）
+- \`3\`: その他の実行時エラー
 - \`64\`: 引数不正
 
 ## 前提
 
 - \`dora\` が PATH に存在すること（\`which dora\` で確認）
-- LM Studio サーバが \`http://localhost:1234/v1\` で起動していること、
-  または \`DORA_BASE_URL\` 環境変数で別エンドポイントが設定されていること
+- LM Studio サーバが \`http://localhost:1234/v1\` で起動、または \`DORA_BASE_URL\` で別エンドポイント
+- \`--provider claude\` 使用時は \`claude\` CLI が PATH にあり認証済み
+- \`--provider codex\` 使用時は \`codex\` CLI が PATH にあり認証済み
 - 設定は \`~/.config/dora/config.json\` or \`DORA_*\` 環境変数で調整可能
 
 ## 注意
 
 - 提案されたコマンドは **そのまま実行せず**、ユーザーに確認してもらうこと（特に破壊的操作）
 - \`dora\` は LLM を介するため、出力に誤りが含まれる可能性がある。注意点（caveats）セクションを重視すること
+- \`precache\` は履歴ファイルを読むので、privacy 確認プロンプトが出る。\`-y\` で省略可
 `;
 }
