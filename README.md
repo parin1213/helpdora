@@ -1,27 +1,56 @@
-# dora (旧 manju)
+# dora
 
-コマンドの `--help` / `man` を日本語に翻訳、あるいは日本語の要望からコマンドを逆引きする CLI。
-LM Studio などの OpenAI 互換エンドポイントに接続して動作します。
+コマンドの要点を日本語で素早く教えてくれる CLI。LM Studio などの OpenAI 互換エンドポイントに接続して動作します。
 
 ```bash
-dora ls                                       # ls のヘルプを日本語訳
-dora git commit                               # サブコマンドのヘルプも OK
-dora --man tar                                # man ページを強制ソースに
-dora --dora ls                                # ドラえもん口調で翻訳
-dora -p "tarで*.tgzを解凍するコマンドを教えて"   # 自然言語で逆引き
-dora -p "podのログをフォロー" --ctx kubectl    # 事前にヘルプを注入して精度UP
-dora cache list                               # キャッシュ一覧
-dora --refresh ls                             # キャッシュ無視して再生成
+# SUMMARY — コマンドの要点＋よく使うレシピ
+dora ls
+dora git commit
+
+# INTENT — コマンドを指定してタスク別レシピ
+dora ls "サブディレクトリ全部見たい"
+dora git commit "WIP として保存したい"
+
+# LOOKUP — コマンド名が分からない逆引き
+dora "tarで*.tgzを解凍"
+dora -p "pidを指定してプロセス殺す"
+
+# FULL — 全オプションの逐語訳
+dora --full ls
+dora --full git commit
+
+# ドラえもん口調
+dora --dora ls
+
+# キャッシュ管理
+dora cache list
+dora cache clear
+dora --refresh ls
+
+# プリキャッシュ: シェル履歴からトレンドのコマンドを事前取得
+dora precache --dry-run      # 候補一覧だけ確認
+dora precache                # 履歴読み取り確認 → 1 件で時間測定 → 続行確認
+dora precache -y --limit 10  # 全自動
 ```
+
+## 4 つのモード
+
+引数の形から自動判定します:
+
+| モード  | 判定条件                                  | 用途                             |
+| ------- | ----------------------------------------- | -------------------------------- |
+| SUMMARY | 既知コマンドのみ                          | 要点＋3〜5レシピ（デフォルト）   |
+| INTENT  | 既知コマンド + 最後の引数に空白/非 ASCII  | そのコマンドでタスクを解決する例 |
+| LOOKUP  | 先頭が未知 or `-p <text>`                 | 自然言語からコマンドを逆引き     |
+| FULL    | `--full` 指定                             | 全オプションの逐語訳             |
 
 ## できること
 
-- **ヘルプ翻訳**: `<cmd> --help` → 失敗時 `man <cmd>` → さらに失敗時 `<cmd> -h` の順でローカルからヘルプを取得し、Markdown 見出し・オプション名・例を保ちつつ日本語訳してストリーミング表示 (BSD 系ツールの `-h` は human-readable フラグを兼ねるため優先度は最後)。出力は **Markdown → ANSI 装飾** に変換済み（見出しカラー化、コードブロックは枠線＋シンタックスハイライト）。`--raw` で素の Markdown 取得可
-- **自然言語 → コマンド逆引き** (`-p`): 推奨コマンド、短い解説、注意点、代替案を構造化 JSON で取得して色付き表示
-- **LLM が知らないコマンドにも対応**: `-p` モードでは LLM が必要に応じて `get_help` ツールを呼び、その場で `--help` を読んで回答
-- **キャッシュ**: LLM 応答を `~/.cache/dora/` に自動保存。同じコマンドの2回目以降は1秒以内。`--refresh` で上書き、`--no-cache` で無効化、`dora cache {list|clear|path}` で管理
-- **ドラえもん口調 (`--dora`)**: 説明文を「〜だよ」「〜なんだ」「〜しよう」調に変換（オプション）
-- **OpenAI 互換**: LM Studio / Ollama / vLLM / OpenAI 本家など、`baseURL` 差し替えだけで切り替え可能
+- **SUMMARY / INTENT / FULL**: `<cmd> --help` → 失敗時 `man <cmd>` → `<cmd> -h` の順でローカルからヘルプを取得し、Markdown → ANSI にして表示
+- **LOOKUP**: 推奨コマンド・解説・注意点・代替案を構造化 JSON で取得。LLM が知らないコマンドは `get_help` ツールを自動で呼んで確認する
+- **キャッシュ**: LLM 応答を `~/.cache/dora/` に保存。2 回目以降は 1 秒以内。`--refresh` で上書き、`--no-cache` で無効化、`dora cache {list|clear|path}` で管理
+- **ドラえもん口調 (`--dora`)**: 「〜だよ」「〜なんだ」調で説明（オプション）
+- **OpenAI 互換**: LM Studio / Ollama / vLLM / OpenAI 本家など、`--base-url` で切り替え可能
 
 ## 前提
 
@@ -39,22 +68,55 @@ pnpm link --global      # グローバルに `dora` コマンドを配置
 
 ## 使い方
 
-### ヘルプ翻訳モード
+### SUMMARY (デフォルト)
 
 ```bash
 dora ls
 dora git commit
-dora --man tar
-dora --raw awk         # 翻訳の下に原文も併記
+dora docker compose up
 ```
 
-### プロンプトモード
+### INTENT (コマンド + やりたいこと)
+
+引数の最後が空白や日本語を含むとタスクとして解釈されます。
 
 ```bash
-dora -p "gitで直前のコミットをundoしたい"
-dora -p "ripgrepで隠しファイルも検索"
-dora --no-tools -p "..."      # LLM のヘルプ取得を無効化
-dora --ctx kubectl -p "podのログを見たい"   # 事前にヘルプ注入
+dora ls "サブディレクトリ全部見たい"
+dora git "直前のコミット取り消したい"
+dora rg "隠しファイル込みで grep"
+```
+
+### LOOKUP (逆引き)
+
+先頭がコマンドとして見つからない or `-p` 指定時。
+
+```bash
+dora "tarで*.tgzを解凍"
+dora -p "podのログをフォロー" --ctx kubectl   # 事前にヘルプを注入して精度UP
+dora --no-tools -p "..."                     # LLM のヘルプ取得を無効化
+```
+
+### FULL (逐語訳)
+
+```bash
+dora --full ls
+dora --full --raw awk     # 翻訳の下に原文も併記
+dora --full --man tar     # man を強制ソースに
+```
+
+### プリキャッシュ (`dora precache`)
+
+シェル履歴（`$HISTFILE` or `~/.zsh_history`）から頻出コマンド＋頻出サブコマンド pair を抽出し、SUMMARY を事前キャッシュします。オフライン前やデモ前に。
+
+- **プライバシー**: 履歴の読み取り前に **必ず確認プロンプト** が出ます。`-y` で省略可
+- **時間推定**: 1 件目の所要時間から全体時間を推定、`--threshold` 分超なら再確認
+- **サブコマンド自動検出**: `git commit`, `mise use` などを頻度ベースで判定（誤検出避けに「3 種類以上の sub を観測」等のヒューリスティック）
+
+```bash
+dora precache --dry-run        # 一覧だけ
+dora precache --limit 10       # 上位 10 件
+dora precache --dora           # ドラえもん口調版もキャッシュ
+dora precache --history-file ~/.bash_history
 ```
 
 ### Claude Code 用スキルをインストール
@@ -62,18 +124,19 @@ dora --ctx kubectl -p "podのログを見たい"   # 事前にヘルプ注入
 ```bash
 dora install-skill
 ```
+
 `~/.claude/skills/dora/SKILL.md` を書き出し、Claude Code から `/dora <args>` として呼べるようになります。
 
 ## 設定
 
 ### 環境変数（CLI 引数 > env > config.json > default）
 
-| 変数 | デフォルト | 説明 |
-|---|---|---|
-| `DORA_BASE_URL` | `http://localhost:1234/v1` | OpenAI 互換エンドポイント |
-| `DORA_API_KEY` | `lm-studio` | ダミー値。OpenAI 本家を使う場合は実キー |
-| `DORA_MODEL` | `qwen3.5-9b` | 使用モデル ID |
-| `DORA_TIMEOUT_MS` | `120000` | リクエストタイムアウト (ミリ秒) |
+| 変数              | デフォルト                 | 説明                             |
+| ----------------- | -------------------------- | -------------------------------- |
+| `DORA_BASE_URL`   | `http://localhost:1234/v1` | OpenAI 互換エンドポイント        |
+| `DORA_API_KEY`    | `lm-studio`                | ダミー値。本家を使う場合は実キー |
+| `DORA_MODEL`      | `qwen3.5-9b`               | 使用モデル ID                    |
+| `DORA_TIMEOUT_MS` | `120000`                   | リクエストタイムアウト (ms)      |
 
 ### 設定ファイル (`~/.config/dora/config.json`)
 
@@ -98,16 +161,51 @@ dora -p "..."
 ## 主なオプション
 
 ```
+--full                FULL モード（全オプション逐語訳）
+--man                 ヘルプ取得元を man に強制 (SUMMARY/FULL)
+--raw                 翻訳の下に原文も併記 (SUMMARY/FULL)
+--dora                ドラえもん口調で出力
+--no-stream           一括出力 (パイプ用途)
 --model <id>          モデル上書き
 --base-url <url>      エンドポイント上書き
---man                 man ページを強制ソースに
---raw                 翻訳と原文を併記
---no-stream           一括出力 (パイプ用)
---ctx <cmd>           -p モードで事前にヘルプを注入 (複数指定可)
---no-tools            -p モードで LLM のツール呼び出しを無効化
+--provider <name>     lm-studio | claude | codex (default: lm-studio)
+--ctx <cmd>           LOOKUP/INTENT で事前にヘルプを注入 (複数指定可)
+--no-tools            LOOKUP/INTENT で LLM のツール呼び出しを無効化
 --max-tool-calls <n>  ツール呼び出し上限 (default: 4)
---debug               タイミング・トークン数・ツール呼び出しを stderr へ
+--no-think-bypass     思考バイパスを無効化 (SUMMARY/FULL)
+--no-cache            キャッシュ無効
+--refresh             キャッシュを無視して再生成
+--debug               タイミング・トークン数を stderr へ
 ```
+
+## プロバイダ切り替え（高級オプション）
+
+`--provider claude` または `--provider codex` で、認証済みの `claude` / `codex` CLI を経由して **賢いモデル**で翻訳できます（特に `--dora` のトーン遵守が格段に良くなる）。
+
+```bash
+dora --provider claude --dora ls
+dora --provider codex ls
+DORA_PROVIDER=claude dora ls          # env で固定
+```
+
+制約 (v1):
+- **SUMMARY / FULL のみ対応**。INTENT / LOOKUP は構造化出力が必要なため `lm-studio` 専用
+- ストリーミングなし（subprocess 完了後に一括出力、間は spinner）
+- `claude` / `codex` CLI が PATH にあり認証済みであること
+
+## モード × フラグ対応表
+
+| フラグ               | SUMMARY | INTENT | FULL | LOOKUP |
+| -------------------- | :-----: | :----: | :--: | :----: |
+| `--dora`             |    ✓    |   ✓    |  ✓   |   ✓    |
+| `--man`              |    ✓    |   —    |  ✓   |   —    |
+| `--raw`              |    ✓    |   —    |  ✓   |   —    |
+| `--no-stream`        |    ✓    |   ✓    |  ✓   |   ✓    |
+| `--no-think-bypass`  |    ✓    |   —    |  ✓   |   —    |
+| `--no-tools`         |    —    |   ✓    |  —   |   ✓    |
+| `--max-tool-calls`   |    —    |   ✓    |  —   |   ✓    |
+| `--ctx`              |    —    |   ✓    |  —   |   ✓    |
+| `--no-cache/refresh` |    ✓    |   ✓    |  ✓   |   ✓    |
 
 ## 終了コード
 
@@ -129,15 +227,16 @@ pnpm build                  # dist/cli.js を生成
 ## 既知の制限
 
 ### 応答速度
-- **翻訳モードは reasoning バイパスを自動適用**: Qwen3/3.5 系モデルでは `/v1/completions` を直接叩き `<think></think>` を prefix 挿入して思考パスを飛ばす（LM Studio の [bug #632](https://github.com/lmstudio-ai/lmstudio-bug-tracker/issues/632) 回避）。`qwen3.5-9b` で従来 5 分が **約 1 分**まで短縮
+
+- **SUMMARY / FULL は reasoning バイパスを自動適用**: Qwen3/3.5 系モデルでは `/v1/completions` を直接叩き `<think></think>` を prefix 挿入して思考パスを飛ばす（LM Studio の [bug #632](https://github.com/lmstudio-ai/lmstudio-bug-tracker/issues/632) 回避）。`qwen3.5-9b` で従来 5 分が **約 1 分**まで短縮
 - 無効化するなら `--no-think-bypass`（Jinja テンプレがズレている別モデル向け）
-- プロンプトモード (`-p`) は構造化出力＋tool-calling のため現状 reasoning あり（2〜3 分）
-- `nippo` 側と揃えて `qwen3.5-9b` を使い回すとロード済みを共有できる（ユニファイドメモリが楽）
+- INTENT / LOOKUP は構造化出力＋tool-calling のため現状 reasoning あり（2〜3 分）
 
 ### 精度
+
 - LLM が提案するコマンドは **そのまま実行せず**、特に破壊的操作は内容を確認してから実行してください
-- 出力には誤りが含まれる可能性があります。`caveats` セクションを必ず確認してください
-- macOS の BSD 系コマンドと Linux の GNU 系コマンドでオプションが異なる場合があります（プロンプトモードでは `caveats` で言及されます）
+- 出力には誤りが含まれる可能性があります。注意点（caveats）を必ず確認してください
+- macOS の BSD 系と Linux の GNU 系でオプションが異なる場合があります
 
 ## License
 
