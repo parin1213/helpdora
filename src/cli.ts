@@ -21,6 +21,7 @@ import { summary, writeSummaryFooter, EmptyResponseError } from "./modes/summary
 import { promptMode, renderAnswer } from "./modes/prompt.js";
 import { installSkill } from "./modes/install-skill.js";
 import { precache, type Variant } from "./modes/precache.js";
+import { completion } from "./modes/completion.js";
 import { CommandNotFoundError, HelpNotFoundError } from "./help-fetcher.js";
 import { detectMode, ArgError, type Mode } from "./mode-detect.js";
 import { writeError } from "./render.js";
@@ -73,6 +74,15 @@ program
   .option("--refresh", "キャッシュを無視してLLMを再実行し、結果を上書き保存")
   .action(async (args: string[], opts: RootOptions) => {
     await runRoot(args, opts);
+  });
+
+program
+  .command("completion")
+  .argument("<shell>", "zsh")
+  .description("シェル補完スクリプトを標準出力に出す (現状 zsh のみ対応)")
+  .allowExcessArguments(false)
+  .action((shell: string) => {
+    process.exit(completion(shell));
   });
 
 program

@@ -129,6 +129,22 @@ dora precache pup --all                        # pup の 4 variants 全部
 
 root の `--provider` / `--model` / `--base-url` は precache にも継承されます。同じコマンドでも provider ごとに別キャッシュが作られるので、`lm-studio` と `claude` を使い分ける運用も可能です。
 
+### zsh 補完
+
+```bash
+# fpath に置いてグローバル有効化（初回のみ）
+mkdir -p ~/.zfunc
+dora completion zsh > ~/.zfunc/_dora
+# ~/.zshrc に以下を追加（未設定なら）:
+#   fpath=(~/.zfunc $fpath)
+#   autoload -U compinit; compinit
+
+# 一時的に試すだけ
+eval "$(dora completion zsh)"
+```
+
+`dora <TAB>` でサブコマンド補完、`--provider <TAB>` で `lm-studio / claude / codex` 補完、`dora cache <TAB>` で `list / clear / path`、など。
+
 ### Claude Code 用スキルをインストール
 
 ```bash
