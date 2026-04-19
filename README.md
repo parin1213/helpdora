@@ -113,11 +113,16 @@ dora --full --man tar     # man を強制ソースに
 - **サブコマンド自動検出**: `git commit`, `mise use` などを頻度ベースで判定（誤検出避けに「3 種類以上の sub を観測」等のヒューリスティック）
 
 ```bash
-dora precache --dry-run        # 一覧だけ
-dora precache --limit 10       # 上位 10 件
-dora precache --dora           # ドラえもん口調版もキャッシュ
-dora precache --history-file ~/.bash_history
+dora precache --dry-run                        # 一覧だけ
+dora precache --limit 10                       # 上位 10 件
+dora precache --tone dora                      # ドラえもん口調版をキャッシュ
+dora precache --mode full                      # 全オプション逐語訳もキャッシュ
+dora precache --all                            # default/dora × summary/full の 4 variants
+dora precache --history-file ~/.bash_history   # 別の履歴ファイルから
+dora --provider claude precache --tone dora    # claude 経由で事前キャッシュ (高級)
 ```
+
+root の `--provider` / `--model` / `--base-url` は precache にも継承されます。同じコマンドでも provider ごとに別キャッシュが作られるので、`lm-studio` と `claude` を使い分ける運用も可能です。
 
 ### Claude Code 用スキルをインストール
 

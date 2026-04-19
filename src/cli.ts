@@ -88,7 +88,11 @@ program
 
 program
   .command("precache")
-  .description("シェル履歴からトレンドのコマンドを抽出して事前キャッシュ")
+  .description(
+    "シェル履歴からトレンドのコマンドを抽出して事前キャッシュ。" +
+      "root の --provider / --model / --base-url を継承するので、" +
+      "`dora --provider claude precache` のように書いて別プロバイダで事前キャッシュできる",
+  )
   .option("-y, --yes", "履歴読み取りと時間確認を自動承認")
   .option("--dry-run", "一覧のみ表示、キャッシュしない")
   .option("--limit <n>", "キャッシュする最大件数", (v) => parseInt(v, 10))
