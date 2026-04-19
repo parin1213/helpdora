@@ -36,6 +36,11 @@ export interface PrecacheOptions {
   /** Require this many distinct subcommands observed before treating as
    *  subcommand-shaped (default 3). */
   pairDistinctSubs?: number;
+  /** Cache a specific command (+ optional sub-args) instead of scanning
+   *  history. Skips the history-permission prompt. If the args list has
+   *  only a top-level cmd, auto-subs are still appended (subject to
+   *  autoSubs). */
+  directArgs?: readonly string[];
   dryRun?: boolean;
   /** Which (mode, tone) variants to cache per command.
    *  - default: [{mode:"summary", tone:"default"}]
@@ -309,9 +314,53 @@ export async function precache(dora: Dora, cfg: Config, opts: PrecacheOptions): 
   }
 }
 
+async function precacheDirect(
+  dora: Dora,
+  cfg: Config,
+  opts: PrecacheOptions,
+  variants: Variant[],
+): Promise<number> {
+  const [cmd, ...args] = opts.directArgs!;
+  if (!cmd || !/^[A-Za-z0-9._+-]+$/.test(cmd)) {
+    writeError(`コマンド名が不正: ${cmd ?? ""}`);
+    return 64;
+  }
+  if (!(await isCommandAvailable(cmd))) {
+    writeError(`コマンドが見つかりません: ${cmd}`);
+    return 1;
+  }
+
+  writeLine(pc.cyan("precache (direct)"));
+  writeDim(`  target: ${[cmd, ...args].join(" ")}`);
+  writeLine();
+
+  // uses=-1 → direct user target (differentiated from history and auto).
+  const candidates: Candidate[] = [
+    { cmd, args, uses: -1, label: [cmd, ...args].join(" ") },
+  ];
+
+  // Auto-detect subs only when the user gave a bare top-level cmd.
+  const autoSubs = opts.autoSubs ?? 8;
+  if (autoSubs > 0 && args.length === 0) {
+    const subs = await enumerateSubcommands(cmd).catch(() => [] as string[]);
+    for (const sub of subs.slice(0, autoSubs)) {
+      candidates.push({ cmd, args: [sub], uses: 0, label: `${cmd} ${sub}` });
+    }
+  }
+  const limited = opts.limit ? candidates.slice(0, opts.limit) : candidates;
+  return runCandidates(dora, cfg, limited, variants, opts);
+}
+
 async function precacheImpl(dora: Dora, cfg: Config, opts: PrecacheOptions): Promise<number> {
-  const historyFile = opts.historyFile ?? defaultHistoryPath();
   const variants: Variant[] = opts.variants ?? [{ mode: "summary", tone: "default" }];
+
+  // Direct mode: user supplied the command(s) on the command line — no
+  // history read, no permission prompt.
+  if (opts.directArgs && opts.directArgs.length > 0) {
+    return precacheDirect(dora, cfg, opts, variants);
+  }
+
+  const historyFile = opts.historyFile ?? defaultHistoryPath();
 
   writeLine(pc.cyan("precache"));
   writeDim(`  history file: ${historyFile}`);
@@ -337,15 +386,32 @@ async function precacheImpl(dora: Dora, cfg: Config, opts: PrecacheOptions): Pro
   }
 
   const candidates = await discover(opts);
+  return runCandidates(dora, cfg, candidates, variants, opts);
+}
+
+/** Shared "display + estimate + run" pipeline for both history-scan and
+ *  direct-arg modes. */
+async function runCandidates(
+  dora: Dora,
+  cfg: Config,
+  candidates: Candidate[],
+  variants: Variant[],
+  opts: PrecacheOptions,
+): Promise<number> {
   const historyCount = candidates.filter((c) => c.uses > 0).length;
   const autoCount = candidates.filter((c) => c.uses === 0).length;
+  const directCount = candidates.filter((c) => c.uses < 0).length;
+  const parts: string[] = [];
+  if (directCount > 0) parts.push(`指定 ${directCount}`);
+  if (historyCount > 0) parts.push(`履歴 ${historyCount}`);
+  if (autoCount > 0) parts.push(`auto ${autoCount}`);
   writeLine();
   writeLine(
     `対象: ${pc.bold(String(candidates.length))} 件 ` +
-      pc.dim(`(履歴 ${historyCount} + auto ${autoCount})`),
+      pc.dim(`(${parts.join(" + ")})`),
   );
   for (const c of candidates) {
-    const tag = c.uses === 0 ? "(auto)" : `${c.uses}x`;
+    const tag = c.uses < 0 ? "(target)" : c.uses === 0 ? "(auto)" : `${c.uses}x`;
     writeDim(`  ${c.label.padEnd(24)}  ${tag}`);
   }
 
@@ -392,7 +458,6 @@ async function precacheImpl(dora: Dora, cfg: Config, opts: PrecacheOptions): Pro
   writeLine();
   writeLine(pc.cyan("キャッシュ開始… (Ctrl-C で中断)"));
 
-  // Run all items × variants in one straight loop — no more mid-flow stdin reads.
   let hits = 0;
   let misses = 0;
   let failures = 0;

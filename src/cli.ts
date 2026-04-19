@@ -88,8 +88,14 @@ program
 
 program
   .command("precache")
+  .argument(
+    "[cmd-and-args...]",
+    "直接キャッシュ対象を指定 (例: `dora precache pup`, `dora precache git diff`)。" +
+      "指定時は履歴スキャンをスキップ。top-level のみ指定なら --auto-subs で sub も自動追加",
+  )
   .description(
-    "シェル履歴からトレンドのコマンドを抽出して事前キャッシュ。" +
+    "シェル履歴からトレンドのコマンドを抽出して事前キャッシュ、" +
+      "または位置引数で対象を直接指定。" +
       "root の --provider / --model / --base-url を継承するので、" +
       "`dora --provider claude precache` のように書いて別プロバイダで事前キャッシュできる",
   )
@@ -107,9 +113,9 @@ program
   .option("--tone <name>", "トーン: default | dora (default: default)", "default")
   .option("--mode <name>", "モード: summary | full (default: summary)", "summary")
   .option("--all", "default/dora × summary/full の 4 variants すべてキャッシュ (--tone/--mode を上書き)")
-  .allowExcessArguments(false)
   .allowUnknownOption(false)
   .action(async (
+    cmdAndArgs: string[],
     o: {
       yes?: boolean;
       dryRun?: boolean;
@@ -194,6 +200,7 @@ program
         thresholdMinutes: o.threshold,
         autoSubs: o.autoSubs,
         historyFile: o.historyFile,
+        directArgs: cmdAndArgs && cmdAndArgs.length > 0 ? cmdAndArgs : undefined,
         variants,
       });
       process.exit(code);
