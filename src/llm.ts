@@ -7,6 +7,8 @@ import type {
 } from "openai/resources/chat/completions.js";
 import type { z } from "zod";
 import type { Config } from "./config.js";
+import { flattenMessages, runProvider } from "./providers/cli-subprocess.js";
+import { ThinkingSpinner } from "./render.js";
 
 export interface DebugHook {
   onStart?: (info: { messages: ChatCompletionMessageParam[]; model: string; tools?: number }) => void;
@@ -49,6 +51,23 @@ export class Dora {
     const t0 = Date.now();
     opts.debug?.onStart?.({ messages, model: this.cfg.model });
 
+    // Premium providers don't stream — run the subprocess to completion and
+    // emit the whole response in one content chunk. A spinner is shown
+    // meanwhile so the user has visible feedback.
+    if (this.cfg.provider === "claude" || this.cfg.provider === "codex") {
+      const spinner = new ThinkingSpinner();
+      spinner.start(`${this.cfg.provider} 思考中`);
+      try {
+        const prompt = flattenMessages(messages);
+        const text = await runProvider(this.cfg.provider, prompt, this.cfg.timeoutMs);
+        opts.debug?.onTokenStats?.({ elapsedMs: Date.now() - t0 });
+        yield { kind: "content", text };
+      } finally {
+        spinner.stop();
+      }
+      return;
+    }
+
     const stream = await this.client.chat.completions.create({
       model: this.cfg.model,
       messages,
@@ -84,6 +103,12 @@ export class Dora {
     messages: ChatCompletionMessageParam[],
     opts: StructuredOptions<T>,
   ): Promise<{ parsed: z.infer<T>; messages: ChatCompletionMessageParam[] }> {
+    if (this.cfg.provider === "claude" || this.cfg.provider === "codex") {
+      throw new Error(
+        `provider="${this.cfg.provider}" は INTENT/LOOKUP 非対応です (v1)。` +
+          `--provider lm-studio で再実行してください`,
+      );
+    }
     const t0 = Date.now();
     const working: ChatCompletionMessageParam[] = [...messages];
     const maxToolCalls = opts.maxToolCalls ?? 4;
@@ -129,21 +154,38 @@ export class Dora {
       }
     }
 
-    // Final structured call
-    opts.debug?.onStart?.({ messages: working, model: this.cfg.model });
-    const res = await this.client.beta.chat.completions.parse({
-      model: this.cfg.model,
-      messages: working,
-      response_format: zodResponseFormat(opts.schema, opts.schemaName),
-    });
-    const parsed = res.choices[0]?.message.parsed;
+    // Final structured call. Qwen3.5 occasionally returns empty content
+    // from LM Studio's parse helper — retry once with a fresh request before
+    // giving up. Empirically fixes most transient INTENT failures.
+    const MAX_RETRIES = 2;
+    let parsed: z.infer<T> | null = null;
+    let lastRes: Awaited<ReturnType<typeof this.client.beta.chat.completions.parse>> | null = null;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      opts.debug?.onStart?.({ messages: working, model: this.cfg.model });
+      const res = await this.client.beta.chat.completions.parse({
+        model: this.cfg.model,
+        messages: working,
+        response_format: zodResponseFormat(opts.schema, opts.schemaName),
+      });
+      lastRes = res;
+      const got = res.choices[0]?.message.parsed;
+      if (got != null) {
+        parsed = got;
+        break;
+      }
+      opts.debug?.onTokenStats?.({
+        completionTokens: res.usage?.completion_tokens,
+        totalTokens: res.usage?.total_tokens,
+        elapsedMs: Date.now() - t0,
+      });
+    }
     if (parsed == null) {
-      throw new Error("LLM returned no parsed structured output");
+      throw new Error("LLM returned no parsed structured output (after retries)");
     }
 
     opts.debug?.onTokenStats?.({
-      completionTokens: res.usage?.completion_tokens,
-      totalTokens: res.usage?.total_tokens,
+      completionTokens: lastRes?.usage?.completion_tokens,
+      totalTokens: lastRes?.usage?.total_tokens,
       elapsedMs: Date.now() - t0,
     });
 

@@ -55,7 +55,26 @@ describe("cache", () => {
   it("cacheClear removes all entries", () => {
     cacheWrite("a", "1", { env });
     cacheWrite("b", "2", { env });
-    expect(cacheClear(env)).toBe(2);
+    expect(cacheClear(undefined, env)).toBe(2);
     expect(cacheList(env)).toEqual([]);
+  });
+
+  it("cacheClear with pattern only removes matching entries", () => {
+    cacheWrite("summary--rg--abc", "1", { env });
+    cacheWrite("summary--git--def", "1", { env });
+    cacheWrite("full--rg--ghi", "1", { env });
+    expect(cacheClear("rg", env)).toBe(2);
+    const remaining = cacheList(env).map((e) => e.key).sort();
+    expect(remaining).toEqual(["summary--git--def"]);
+  });
+
+  it("cacheKey with label prefixes the hash", () => {
+    const k = cacheKey(["x"], "summary--rg");
+    expect(k).toMatch(/^summary--rg--[0-9a-f]{20}$/);
+  });
+
+  it("cacheKey sanitises unsafe chars in the label", () => {
+    const k = cacheKey(["x"], "intent--git commit/foo");
+    expect(k).toMatch(/^intent--git_commit_foo--[0-9a-f]{20}$/);
   });
 });

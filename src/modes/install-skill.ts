@@ -46,30 +46,23 @@ export function installSkill(opts: InstallSkillOptions = {}): number {
 function skillContent(): string {
   return `---
 name: dora
-description: ローカルの dora CLI を使い、シェルコマンドの --help / man ページを日本語訳したり、自然言語の要望（"tarで*.tgzを解凍するコマンドを教えて" 等）から適切なコマンドを逆引きする。Use when the user runs \`/dora\` or asks to translate a command's help / look up a command by intent.
+description: ローカルの dora CLI を使い、シェルコマンドの要点・タスク別レシピ・自然言語からの逆引きを日本語で取得する。Use when the user runs \`/dora\` or asks to summarize a command, get a recipe for a specific task with a known command, look up a command by intent, or produce a full option-by-option translation.
 ---
 
 # /dora スキル実行手順
 
 ユーザーが \`/dora\` を発動したら、引数を**そのまま** \`dora\` CLI に渡す。LM Studio など OpenAI 互換エンドポイントに接続して実行され、日本語で結果が返る。
 
-## 使い方
+## 4 つのモード
 
-### ヘルプ翻訳モード
-\`\`\`
-/dora ls
-/dora git commit
-/dora --man tar
-\`\`\`
-→ Bash ツールで \`dora <args>\` を起動し、出力（Markdown）をそのままユーザーに見せる。
+dora は引数から自動で以下のモードを選ぶ:
 
-### プロンプトモード（自然言語 → コマンド逆引き）
-\`\`\`
-/dora -p "tarで*.tgzを解凍するコマンドを教えて"
-/dora -p "gitで直前のコミットをundoしたい"
-/dora --ctx kubectl -p "podのログをフォローしたい"
-\`\`\`
-→ 構造化された結果（推奨コマンド＋解説＋注意点）が色付きで出力される。
+| モード  | 例                               | 内容                           |
+| ------- | -------------------------------- | ------------------------------ |
+| SUMMARY | \`/dora ls\`                     | 要点＋よく使うレシピ 3〜5 個   |
+| INTENT  | \`/dora git "直前のコミット取消"\` | コマンド指定でタスク別レシピ   |
+| LOOKUP  | \`/dora "tarで解凍"\`            | 自然言語からコマンドを逆引き   |
+| FULL    | \`/dora --full ls\`              | 全オプションの逐語訳           |
 
 ## 実行方法
 
@@ -84,17 +77,18 @@ dora <ユーザーが渡した全引数>
 - \`0\`: 成功
 - \`1\`: コマンドが見つからない／ヘルプが取得できない
 - \`2\`: LLM 接続エラー（LM Studio サーバ未起動など）
+- \`64\`: 引数不正
 
 ## 前提
 
 - \`dora\` が PATH に存在すること（\`which dora\` で確認）
 - LM Studio サーバが \`http://localhost:1234/v1\` で起動していること、
-  または \`MANJU_BASE_URL\` 環境変数で別エンドポイントが設定されていること
-- 設定は \`~/.config/dora/config.json\` or \`MANJU_*\` 環境変数で調整可能
+  または \`DORA_BASE_URL\` 環境変数で別エンドポイントが設定されていること
+- 設定は \`~/.config/dora/config.json\` or \`DORA_*\` 環境変数で調整可能
 
 ## 注意
 
 - 提案されたコマンドは **そのまま実行せず**、ユーザーに確認してもらうこと（特に破壊的操作）
-- \`dora\` は LLM を介するため、出力に誤りが含まれる可能性がある。\`caveats\` セクションを重視すること
+- \`dora\` は LLM を介するため、出力に誤りが含まれる可能性がある。注意点（caveats）セクションを重視すること
 `;
 }

@@ -6,6 +6,7 @@ import { PromptAnswer, type PromptAnswerT } from "../schemas.js";
 import { ThinkingSpinner, writeCaveat, writeCommandBox, writeDebug, writeDim, writeLine } from "../render.js";
 import { cacheKey, cacheRead, cacheWrite, type CacheOptions } from "../cache.js";
 import pc from "picocolors";
+import { DORAEMON_CORE, DORAEMON_CODE_EXEMPT, DORAEMON_INTENT_OPENER } from "../tone/doraemon.js";
 
 const SYSTEM_PROMPT = `あなたはシェル/Unix コマンドのエキスパートです。
 ユーザーの日本語自然言語の要望に対し、最適な実行可能コマンドを提案します。
@@ -21,18 +22,12 @@ const SYSTEM_PROMPT = `あなたはシェル/Unix コマンドのエキスパー
 - 情報源（ヘルプを実際に読んだ場合）を sources に記録する（例: "tar --help"）
 - alternatives には「主コマンドの微調整版」ではなく「明確に異なるユースケース」向けの代替のみ入れる`;
 
-const DORA_TONE_APPEND = `
+const DORA_TONE_APPEND = `\n\n${DORAEMON_CORE}\n${DORAEMON_CODE_EXEMPT}`;
+const DORA_TONE_INTENT = DORA_TONE_APPEND + "\n" + DORAEMON_INTENT_OPENER;
 
-# 口調指定: ドラえもん
-explanation / caveats / alternatives[].when をドラえもん口調で書く:
-- 一人称「ぼく」、二人称「きみ」
-- 文末「〜だよ」「〜なんだ」「〜しよう」「〜のさ」「〜ね」
-- 「やれやれ」「どうしたの」「バカだなあ」を自然な位置で時々（多用禁止）
-- 丁寧語（です・ます）は使わない
-- command 値自体は当然ながら**そのまま**（口調変換の対象外）`;
-
-function systemPromptFor(tone: "default" | "dora" | undefined): string {
-  return tone === "dora" ? SYSTEM_PROMPT + DORA_TONE_APPEND : SYSTEM_PROMPT;
+function systemPromptFor(tone: "default" | "dora" | undefined, isIntent = false): string {
+  if (tone !== "dora") return SYSTEM_PROMPT;
+  return SYSTEM_PROMPT + (isIntent ? DORA_TONE_INTENT : DORA_TONE_APPEND);
 }
 
 const TOOL_GET_HELP: ChatCompletionTool = {
@@ -70,6 +65,8 @@ export interface PromptOptions {
   tone?: "default" | "dora";
   cache?: CacheOptions;
   cfg?: Config;
+  /** INTENT モード: このコマンドを使った答えを期待していることを明示する */
+  targetCmd?: { cmd: string; args: readonly string[] };
 }
 
 interface ToolCallArgs {
@@ -88,9 +85,25 @@ export async function promptMode(
   const tone = opts.tone ?? "default";
 
   const messages: ChatCompletionMessageParam[] = [
-    { role: "system", content: systemPromptFor(tone) },
+    { role: "system", content: systemPromptFor(tone, Boolean(opts.targetCmd)) },
     { role: "user", content: question },
   ];
+
+  // INTENT モード: 使用するコマンドが確定しているので、そのヘルプを事前注入し
+  // システム指示で「このコマンドを使え」と明示する。
+  if (opts.targetCmd) {
+    const { cmd, args } = opts.targetCmd;
+    const result = await runGetHelp(cmd, args, "auto", helpCache);
+    if (opts.debug) writeDebug(`target cmd: ${[cmd, ...args].join(" ")} → ${result.length} chars`);
+    const label = [cmd, ...args].join(" ");
+    messages.push({
+      role: "system",
+      content: `ユーザーは **${label}** を使う前提で質問しています。
+他のコマンドで代替提案しないこと（どうしても不適切な場合のみ caveats で言及）。
+以下が ${label} のヘルプ本文です:
+${result}`,
+    });
+  }
 
   // --ctx で指定されたコマンドのヘルプを事前注入（ツール呼び出し数を削減）
   if (opts.ctx && opts.ctx.length > 0) {
@@ -107,15 +120,25 @@ export async function promptMode(
   // Answer cache. Includes ctx content in the key so changing preloaded
   // help invalidates prior cached answers for the same question.
   const cacheOpts = opts.cache ?? {};
-  const answerKey = cacheKey([
-    "prompt",
-    opts.cfg?.model ?? "",
-    opts.cfg?.baseUrl ?? "",
-    tone,
-    useTools,
-    question,
-    Array.from(opts.ctx ?? []),
-  ]);
+  const provider = opts.cfg?.provider ?? "lm-studio";
+  const base = opts.targetCmd
+    ? `intent--${[opts.targetCmd.cmd, ...opts.targetCmd.args].join("_")}`
+    : "lookup";
+  const label = `${provider}--${base}`;
+  const answerKey = cacheKey(
+    [
+      "prompt",
+      provider,
+      opts.cfg?.model ?? "",
+      opts.cfg?.baseUrl ?? "",
+      tone,
+      useTools,
+      question,
+      Array.from(opts.ctx ?? []),
+      opts.targetCmd ? [opts.targetCmd.cmd, ...opts.targetCmd.args] : null,
+    ],
+    label,
+  );
   const cached = cacheRead(answerKey, cacheOpts);
   if (cached) {
     try {

@@ -19,13 +19,30 @@ function cacheDir(env: NodeJS.ProcessEnv = process.env): string {
 }
 
 /**
- * Derive a stable 16-char hex key from any JSON-serialisable parts. Order
- * matters, so keep callers consistent.
+ * Derive a stable cache key from any JSON-serialisable parts. Order matters,
+ * so keep callers consistent. When `label` is given it is prepended to the
+ * hash so `cache list` / `cache clear <pattern>` can recognise entries by
+ * their mode+command (e.g. `summary--rg--a8b3c...`).
  */
-export function cacheKey(parts: unknown[]): string {
+export function cacheKey(parts: unknown[], label?: string): string {
   const h = createHash("sha256");
   h.update(JSON.stringify(parts));
-  return h.digest("hex").slice(0, 20);
+  const hash = h.digest("hex").slice(0, 20);
+  if (!label) return hash;
+  return `${slug(label)}--${hash}`;
+}
+
+/**
+ * Filesystem-safe slug. Only alnum/dot/underscore/hyphen survive; everything
+ * else becomes `_`. Collapses runs of `_` so cmds with unusual args stay
+ * readable.
+ */
+function slug(s: string): string {
+  return s
+    .replace(/[^A-Za-z0-9._-]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "")
+    .slice(0, 60);
 }
 
 export interface CacheOptions {
@@ -77,10 +94,17 @@ export function cacheList(env: NodeJS.ProcessEnv = process.env): CacheEntry[] {
   return out.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
 }
 
-export function cacheClear(env: NodeJS.ProcessEnv = process.env): number {
+/**
+ * Remove cache entries. With no pattern, clears everything. With a pattern,
+ * removes only entries whose filename contains it as a substring (case-
+ * sensitive). Good for iterative development: `cache clear rg` drops all
+ * cached answers for the `rg` command across modes.
+ */
+export function cacheClear(pattern?: string, env: NodeJS.ProcessEnv = process.env): number {
   const dir = cacheDir(env);
   let n = 0;
   for (const name of readdirSync(dir)) {
+    if (pattern && !name.includes(pattern)) continue;
     try {
       unlinkSync(join(dir, name));
       n++;

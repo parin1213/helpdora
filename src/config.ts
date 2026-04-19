@@ -2,7 +2,10 @@ import { readFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+export type Provider = "lm-studio" | "claude" | "codex";
+
 export interface Config {
+  provider: Provider;
   baseUrl: string;
   apiKey: string;
   model: string;
@@ -10,12 +13,14 @@ export interface Config {
 }
 
 export interface ConfigOverrides {
+  provider?: Provider;
   baseUrl?: string;
   model?: string;
   timeoutMs?: number;
 }
 
 const DEFAULTS: Config = {
+  provider: "lm-studio",
   baseUrl: "http://localhost:1234/v1",
   apiKey: "lm-studio",
   model: "qwen3.5-9b",
@@ -30,6 +35,10 @@ export function configPath(env: NodeJS.ProcessEnv = process.env): string {
 export function loadConfig(cli: ConfigOverrides = {}, env: NodeJS.ProcessEnv = process.env): Config {
   const file = readConfigFile(configPath(env));
   const envCfg: Partial<Config> = {};
+  if (env.DORA_PROVIDER) {
+    const p = env.DORA_PROVIDER;
+    if (p === "lm-studio" || p === "claude" || p === "codex") envCfg.provider = p;
+  }
   if (env.DORA_BASE_URL) envCfg.baseUrl = env.DORA_BASE_URL;
   if (env.DORA_API_KEY) envCfg.apiKey = env.DORA_API_KEY;
   if (env.DORA_MODEL) envCfg.model = env.DORA_MODEL;
@@ -52,6 +61,10 @@ function readConfigFile(path: string): Partial<Config> {
     const raw = readFileSync(path, "utf8");
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     const out: Partial<Config> = {};
+    if (typeof parsed.provider === "string") {
+      const p = parsed.provider;
+      if (p === "lm-studio" || p === "claude" || p === "codex") out.provider = p;
+    }
     if (typeof parsed.baseUrl === "string") out.baseUrl = parsed.baseUrl;
     if (typeof parsed.apiKey === "string") out.apiKey = parsed.apiKey;
     if (typeof parsed.model === "string") out.model = parsed.model;

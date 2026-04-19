@@ -6,6 +6,7 @@ import { streamRaw, isSupportedModel } from "../llm-raw.js";
 import { writeChunk, writeDebug, writeDim, writeLine, writeReasoningChunk, writeReasoningEnd } from "../render.js";
 import { MarkdownStream } from "../stream-md.js";
 import { cacheKey, cacheRead, cacheWrite, type CacheOptions } from "../cache.js";
+import { DORAEMON_CORE, DORAEMON_CODE_EXEMPT } from "../tone/doraemon.js";
 
 const SYSTEM_PROMPT = `あなたは Unix/Linux/macOS コマンドに精通した翻訳者です。
 与えられた英語のヘルプテキストの **すべての説明文を日本語に翻訳** してください。英語をそのまま残すのは不可。
@@ -27,25 +28,7 @@ const SYSTEM_PROMPT = `あなたは Unix/Linux/macOS コマンドに精通した
 - オプションが 15 以上かつ説明が長い場合のみ Markdown 表
 - 原文に使用例があれば残す、**なければ追加しない**`;
 
-const DORA_TONE_APPEND = `
-
-# 口調指定: ドラえもん
-すべての日本語の説明文を、アニメ「ドラえもん」のドラえもんの口調で書き換えてください。
-
-語彙と一人称:
-- 一人称は「ぼく」、二人称は「きみ」（ユーザーを呼び掛ける場面でのみ使う）
-- 丁寧すぎず、子供にも分かる親しみやすい言葉を選ぶ（「実行する」→「動かすんだ」、「指定する」→「決めるんだよ」など）
-- 「バカだなあ」「やれやれ」「どうしたの？」など、ドラえもん独特のやわらかい呼び掛けは自然な位置で挟んでよい（多用しすぎない、1〜2個/出力）
-
-文末（語尾）:
-- 「〜だよ」「〜なんだ」「〜のさ」「〜ね」「〜しよう」「〜するんだ」「〜だぜ」など、親しみやすい文末を使う
-- 「です・ます」「〜である」「〜します」は使わない
-- 体言止めも時々使ってOK
-
-その他:
-- オプション名・コマンド名・コードブロック・URL・identifier は原文のまま（口調変換の対象外）
-- 絵文字は使わない（フォント差異でズレるため）
-- 「やれやれ、…出すか。」のような「何かを取り出すよ」という秘密道具的な言い回しをセクション冒頭で1回だけ使ってよい（ただし自然な文脈で）`;
+const DORA_TONE_APPEND = `\n\n${DORAEMON_CORE}\n${DORAEMON_CODE_EXEMPT}`;
 
 function systemPromptFor(tone: "default" | "dora" | undefined): string {
   return tone === "dora" ? SYSTEM_PROMPT + DORA_TONE_APPEND : SYSTEM_PROMPT;
@@ -59,6 +42,9 @@ export interface TranslateOptions {
   bypassThinking?: boolean;
   tone?: "default" | "dora";
   cache?: CacheOptions;
+  /** Suppress all stdout rendering; still populates cache. Used by precache. */
+  quiet?: boolean;
+  onComplete?: (info: { cacheHit: boolean; bytes: number }) => void;
 }
 
 export async function translate(
@@ -84,29 +70,30 @@ export async function translate(
     { role: "user" as const, content: user },
   ];
 
-  const useBypass = (opts.bypassThinking ?? true) && isSupportedModel(cfg.model);
-  const cacheK = cacheKey([
-    "translate",
-    cfg.model,
-    cfg.baseUrl,
-    tone,
-    useBypass,
-    help.source,
-    help.text,
-  ]);
+  const useBypass =
+    (opts.bypassThinking ?? true) && cfg.provider === "lm-studio" && isSupportedModel(cfg.model);
+  const cacheK = cacheKey(
+    ["translate", cfg.provider, cfg.model, cfg.baseUrl, tone, useBypass, help.source, help.text],
+    `full--${cfg.provider}--${[cmd, ...args].join("_")}`,
+  );
   const cacheOpts = opts.cache ?? {};
 
   // Cache hit: render the cached Markdown through the usual pipeline so
   // the user still gets nice ANSI formatting but skips the LLM round-trip.
   const hit = cacheRead(cacheK, cacheOpts);
-  const header = `# ${[cmd, ...args].join(" ")} — 翻訳 (source: ${help.source}${hit ? ", cached" : ""})`;
-  writeDim(header);
-  writeLine();
+  if (!opts.quiet) {
+    const header = `# ${[cmd, ...args].join(" ")} — 翻訳 (source: ${help.source}${hit ? ", cached" : ""})`;
+    writeDim(header);
+    writeLine();
+  }
 
   if (hit) {
     if (opts.debug) writeDebug(`cache hit: key=${cacheK} bytes=${hit.length}`);
-    renderMarkdown(hit, opts);
-    if (opts.raw) appendRaw(help.text);
+    if (!opts.quiet) {
+      renderMarkdown(hit, opts);
+      if (opts.raw) appendRaw(help.text);
+    }
+    opts.onComplete?.({ cacheHit: true, bytes: hit.length });
     return;
   }
 
@@ -115,16 +102,17 @@ export async function translate(
   }
 
   // Stream, but accumulate so we can cache the final Markdown.
-  const prettyMd = !opts.raw;
+  const prettyMd = !opts.raw && !opts.quiet;
   const md = prettyMd ? new MarkdownStream() : null;
   let accumulator = "";
   const emitChunk = (s: string): void => {
     accumulator += s;
-    if (opts.stream === false) return;
+    if (opts.quiet || opts.stream === false) return;
     if (md) md.write(s);
     else writeChunk(s);
   };
   const finishContent = (): void => {
+    if (opts.quiet) return;
     if (opts.stream === false) {
       // batch mode: render the whole thing now
       if (md) md.write(accumulator);
