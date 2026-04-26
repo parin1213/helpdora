@@ -45,13 +45,13 @@ function slug(s: string): string {
     .slice(0, 60);
 }
 
-export interface CacheOptions {
+export type CacheOptions = {
   /** skip read; always write fresh */
   refresh?: boolean;
   /** disable both read and write */
   disabled?: boolean;
   env?: NodeJS.ProcessEnv;
-}
+};
 
 export function cacheRead(key: string, opts: CacheOptions = {}): string | null {
   if (opts.disabled || opts.refresh) return null;
@@ -73,11 +73,11 @@ export function cacheWrite(key: string, value: string, opts: CacheOptions = {}):
   }
 }
 
-export interface CacheEntry {
+export type CacheEntry = {
   key: string;
   bytes: number;
   mtime: Date;
-}
+};
 
 export function cacheList(env: NodeJS.ProcessEnv = process.env): CacheEntry[] {
   const dir = cacheDir(env);

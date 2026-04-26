@@ -4,20 +4,20 @@ import { join } from "node:path";
 
 export type Provider = "lm-studio" | "claude" | "codex";
 
-export interface Config {
+export type Config = {
   provider: Provider;
   baseUrl: string;
   apiKey: string;
   model: string;
   timeoutMs: number;
-}
+};
 
-export interface ConfigOverrides {
+export type ConfigOverrides = {
   provider?: Provider;
   baseUrl?: string;
   model?: string;
   timeoutMs?: number;
-}
+};
 
 const DEFAULTS: Config = {
   provider: "lm-studio",

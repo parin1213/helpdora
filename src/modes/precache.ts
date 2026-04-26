@@ -26,7 +26,7 @@ const SKIP = new Set([
   "dora",
 ]);
 
-export interface PrecacheOptions {
+export type PrecacheOptions = {
   historyFile?: string;
   limit?: number;
   /** Minimum frequency for top-level commands (default 3). */
@@ -57,7 +57,7 @@ export interface PrecacheOptions {
   assumeYes?: boolean;
   /** Ask-for-confirmation threshold in minutes (default 2). */
   thresholdMinutes?: number;
-}
+};
 
 export type Variant = { mode: "summary" | "full"; tone: "default" | "dora" };
 
@@ -75,12 +75,12 @@ const VARIANT_SECS: Record<string, number> = {
   "full/dora": 30,
 };
 
-interface Candidate {
+type Candidate = {
   cmd: string;
   args: string[];
   uses: number;
   label: string; // "git" / "git commit"
-}
+};
 
 function parseZshHistory(path: string): string[] {
   const raw = readFileSync(path, "utf8");

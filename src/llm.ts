@@ -10,28 +10,28 @@ import type { Config } from "./config.js";
 import { flattenMessages, runProvider } from "./providers/cli-subprocess.js";
 import { ThinkingSpinner } from "./render.js";
 
-export interface DebugHook {
+export type DebugHook = {
   onStart?: (info: { messages: ChatCompletionMessageParam[]; model: string; tools?: number }) => void;
   onTokenStats?: (stats: { completionTokens?: number; totalTokens?: number; elapsedMs: number }) => void;
   onToolCall?: (info: { name: string; args: string; resultChars: number }) => void;
-}
+};
 
 export type StreamEvent =
   | { kind: "reasoning"; text: string }
   | { kind: "content"; text: string };
 
-export interface StreamChatOptions {
+export type StreamChatOptions = {
   debug?: DebugHook;
-}
+};
 
-export interface StructuredOptions<T extends z.ZodTypeAny> {
+export type StructuredOptions<T extends z.ZodTypeAny> = {
   schema: T;
   schemaName: string;
   tools?: ChatCompletionTool[];
   handleTool?: (call: ChatCompletionMessageToolCall) => Promise<string>;
   maxToolCalls?: number;
   debug?: DebugHook;
-}
+};
 
 export class Dora {
   private client: OpenAI;

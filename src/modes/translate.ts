@@ -34,7 +34,7 @@ function systemPromptFor(tone: "default" | "dora" | undefined): string {
   return tone === "dora" ? SYSTEM_PROMPT + DORA_TONE_APPEND : SYSTEM_PROMPT;
 }
 
-export interface TranslateOptions {
+export type TranslateOptions = {
   man?: boolean;
   raw?: boolean;
   stream?: boolean;
@@ -45,7 +45,7 @@ export interface TranslateOptions {
   /** Suppress all stdout rendering; still populates cache. Used by precache. */
   quiet?: boolean;
   onComplete?: (info: { cacheHit: boolean; bytes: number }) => void;
-}
+};
 
 export async function translate(
   dora: Dora,

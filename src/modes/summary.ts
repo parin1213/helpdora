@@ -39,7 +39,7 @@ function systemPromptFor(tone: "default" | "dora" | undefined): string {
   return tone === "dora" ? SYSTEM_PROMPT + DORA_TONE_APPEND : SYSTEM_PROMPT;
 }
 
-export interface SummaryOptions {
+export type SummaryOptions = {
   man?: boolean;
   raw?: boolean;
   stream?: boolean;
@@ -51,7 +51,7 @@ export interface SummaryOptions {
   quiet?: boolean;
   /** Called after the final write so callers can tell cache-hit from miss. */
   onComplete?: (info: { cacheHit: boolean; bytes: number }) => void;
-}
+};
 
 // SUMMARY は要点抽出だけなので、巨大ヘルプ (rg 74KB, git diff man 40KB など)
 // を投入するとコンテキストを食いつぶして 0 トークン返答になる。更に --dora

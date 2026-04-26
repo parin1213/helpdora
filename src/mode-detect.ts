@@ -20,12 +20,12 @@ function looksLikePhrase(s: string): boolean {
   return /\s/.test(s) || /[^\x20-\x7e]/.test(s);
 }
 
-export interface DetectOptions {
+export type DetectOptions = {
   full?: boolean;
   prompt?: string;
   /** test seam: override PATH lookup */
   isCommandAvailable?: (name: string) => Promise<boolean>;
-}
+};
 
 export async function detectMode(args: readonly string[], opts: DetectOptions): Promise<Mode> {
   if (opts.prompt && opts.full) {

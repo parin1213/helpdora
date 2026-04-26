@@ -1,19 +1,19 @@
 import type { Config } from "./config.js";
 
-export interface RawMessage {
+export type RawMessage = {
   role: "system" | "user" | "assistant";
   content: string;
-}
+};
 
-export interface RawDebugHook {
+export type RawDebugHook = {
   onStart?: (info: { promptChars: number; model: string }) => void;
   onTokenStats?: (stats: { completionTokens: number; elapsedMs: number }) => void;
-}
+};
 
-export interface StreamRawOptions {
+export type StreamRawOptions = {
   suppressThinking?: boolean;
   debug?: RawDebugHook;
-}
+};
 
 /**
  * Bypass LM Studio's chat template application by formatting the Qwen3-style

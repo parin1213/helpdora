@@ -6,10 +6,10 @@ import { writeDim, writeError, writeLine } from "../render.js";
 
 const SKILL_NAME = "dora";
 
-export interface InstallSkillOptions {
+export type InstallSkillOptions = {
   force?: boolean;
   dir?: string;
-}
+};
 
 export function installSkill(opts: InstallSkillOptions = {}): number {
   const skillsRoot = opts.dir ?? join(homedir(), ".claude", "skills");

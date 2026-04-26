@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fetchHelp, CommandNotFoundError, HelpNotFoundError } from "../src/help-fetcher.js";
+import { fetchHelp, CommandNotFoundError } from "../src/help-fetcher.js";
 
 describe("fetchHelp", () => {
   it("throws CommandNotFoundError for unknown command", async () => {
@@ -10,40 +10,41 @@ describe("fetchHelp", () => {
     await expect(fetchHelp("foo; rm -rf /")).rejects.toBeInstanceOf(CommandNotFoundError);
   });
 
-  it("fetches --help for `ls`", async () => {
-    const r = await fetchHelp("ls");
-    expect(r.text.length).toBeGreaterThan(0);
-    expect(["help", "short-help", "man"]).toContain(r.source);
+  it("fetches help for `node`", async () => {
+    const result = await fetchHelp("node");
+    expect(result.text.length).toBeGreaterThan(0);
+    expect(["help", "short-help", "man"]).toContain(result.source);
   });
 
-  it("honors --man-only", async () => {
-    const r = await fetchHelp("ls", [], { source: "man" });
-    expect(r.source).toBe("man");
-    expect(r.text.length).toBeGreaterThan(0);
+  it("honors native help preference", async () => {
+    const result = await fetchHelp("ls", [], { source: "man" });
+    expect(result.source).toBe("man");
+    expect(result.text.length).toBeGreaterThan(0);
   });
 
-  it("passes subcommand args through", async () => {
-    // `git commit --help` should include the word "commit"
-    const r = await fetchHelp("git", ["commit"]);
-    expect(r.text.toLowerCase()).toContain("commit");
+  it("passes extra args through", async () => {
+    const result = await fetchHelp("node", ["--test"]);
+    expect(result.text.toLowerCase()).toContain("--test");
   });
 
   it("truncates huge output", async () => {
-    const r = await fetchHelp("ls", [], { maxBytes: 50 });
-    const bytes = Buffer.byteLength(r.text, "utf8");
+    const result = await fetchHelp("node", [], { maxBytes: 50 });
+    const bytes = Buffer.byteLength(result.text, "utf8");
     expect(bytes).toBeLessThanOrEqual(50 + "\n...[truncated]".length + 4);
   });
 
-  it("resolves a shell-function wrapper (z → zoxide) when zoxide is installed", async () => {
-    // Skip if zoxide/z aren't installed on this machine
+  it("resolves a shell-function wrapper (z -> zoxide) when available", async () => {
+    if (process.platform === "win32") return;
+
     const { spawnSync } = await import("node:child_process");
     const zoxide = spawnSync("which", ["zoxide"], { encoding: "utf8" });
     if (zoxide.status !== 0) return;
+
     const zDef = spawnSync(process.env.SHELL || "/bin/zsh", ["-ic", "type z"], { encoding: "utf8" });
     if (!/function|alias/.test(zDef.stdout + zDef.stderr)) return;
 
-    const r = await fetchHelp("z");
-    expect(r.cmd).toBe("zoxide");
-    expect(r.text.length).toBeGreaterThan(50);
+    const result = await fetchHelp("z");
+    expect(result.cmd).toBe("zoxide");
+    expect(result.text.length).toBeGreaterThan(50);
   });
 }, { timeout: 15_000 });

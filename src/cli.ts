@@ -26,7 +26,7 @@ import { CommandNotFoundError, HelpNotFoundError } from "./help-fetcher.js";
 import { detectMode, ArgError, type Mode } from "./mode-detect.js";
 import { writeError } from "./render.js";
 
-interface RootOptions {
+type RootOptions = {
   prompt?: string;
   man?: boolean;
   raw?: boolean;
@@ -43,7 +43,7 @@ interface RootOptions {
   cache?: boolean;
   refresh?: boolean;
   full?: boolean;
-}
+};
 
 const program = new Command();
 

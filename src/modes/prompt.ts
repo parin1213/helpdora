@@ -57,7 +57,7 @@ const TOOL_GET_HELP: ChatCompletionTool = {
   },
 };
 
-export interface PromptOptions {
+export type PromptOptions = {
   useTools?: boolean;
   maxToolCalls?: number;
   ctx?: readonly string[];
@@ -67,13 +67,13 @@ export interface PromptOptions {
   cfg?: Config;
   /** INTENT モード: このコマンドを使った答えを期待していることを明示する */
   targetCmd?: { cmd: string; args: readonly string[] };
-}
+};
 
-interface ToolCallArgs {
+type ToolCallArgs = {
   cmd?: unknown;
   args?: unknown;
   source?: unknown;
-}
+};
 
 export async function promptMode(
   dora: Dora,
