@@ -23,7 +23,7 @@ const SKIP = new Set([
   "true", "false", ":", ".", "pwd", "exit", "clear", "history", "type",
   "which", "command", "eval", "exec", "read", "printf", "time", "builtin",
   "function", "return", "local", "declare", "typeset", "readonly", "hash",
-  "dora",
+  "helpdora", "dora",
 ]);
 
 export type PrecacheOptions = {
@@ -450,7 +450,7 @@ async function runCandidates(
   if (estMin > threshold && !opts.assumeYes) {
     writeError(
       `閾値 ${threshold} 分を超えています。全件キャッシュするには ${pc.bold("-y")} を付けて再実行してください\n` +
-        `  例: dora precache -y --limit 10`,
+        `  例: helpdora precache -y --limit 10`,
     );
     return 3;
   }

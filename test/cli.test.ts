@@ -29,7 +29,7 @@ describe("cli", () => {
   it("--help shows usage", () => {
     const result = run(["--help"]);
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain("dora");
+    expect(result.stdout).toContain("helpdora");
     expect(result.stdout).toContain("--prompt");
     expect(result.stdout).toContain("install-skill");
   });
@@ -46,25 +46,25 @@ describe("cli", () => {
   });
 
   it("install-skill --dir writes SKILL.md", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "dora-skill-"));
+    const tmp = mkdtempSync(join(tmpdir(), "helpdora-skill-"));
     try {
       const result = run(["install-skill", "--dir", tmp]);
       expect(result.code).toBe(0);
-      const filePath = join(tmp, "dora", "SKILL.md");
+      const filePath = join(tmp, "helpdora", "SKILL.md");
       expect(existsSync(filePath)).toBe(true);
       const body = readFileSync(filePath, "utf8");
-      expect(body).toContain("name: dora");
-      expect(body).toContain("/dora");
+      expect(body).toContain("name: helpdora");
+      expect(body).toContain("/helpdora");
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
   });
 
   it("install-skill refuses to overwrite without --force", () => {
-    const tmp = mkdtempSync(join(tmpdir(), "dora-skill-"));
+    const tmp = mkdtempSync(join(tmpdir(), "helpdora-skill-"));
     try {
       run(["install-skill", "--dir", tmp]);
-      const filePath = join(tmp, "dora", "SKILL.md");
+      const filePath = join(tmp, "helpdora", "SKILL.md");
       const original = readFileSync(filePath, "utf8");
       writeFileSync(filePath, original + "\n# edited\n", "utf8");
 

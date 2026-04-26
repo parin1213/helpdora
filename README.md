@@ -1,36 +1,36 @@
-# dora
+# helpdora
 
 コマンドの要点を日本語で素早く教えてくれる CLI。LM Studio などの OpenAI 互換エンドポイントに接続して動作します。
 
 ```bash
 # SUMMARY — コマンドの要点＋よく使うレシピ
-dora ls
-dora git commit
+helpdora ls
+helpdora git commit
 
 # INTENT — コマンドを指定してタスク別レシピ
-dora ls "サブディレクトリ全部見たい"
-dora git commit "WIP として保存したい"
+helpdora ls "サブディレクトリ全部見たい"
+helpdora git commit "WIP として保存したい"
 
 # LOOKUP — コマンド名が分からない逆引き
-dora "tarで*.tgzを解凍"
-dora -p "pidを指定してプロセス殺す"
+helpdora "tarで*.tgzを解凍"
+helpdora -p "pidを指定してプロセス殺す"
 
 # FULL — 全オプションの逐語訳
-dora --full ls
-dora --full git commit
+helpdora --full ls
+helpdora --full git commit
 
 # ドラえもん口調
-dora --dora ls
+helpdora --dora ls
 
 # キャッシュ管理
-dora cache list
-dora cache clear
-dora --refresh ls
+helpdora cache list
+helpdora cache clear
+helpdora --refresh ls
 
 # プリキャッシュ: シェル履歴からトレンドのコマンドを事前取得
-dora precache --dry-run      # 候補一覧だけ確認
-dora precache                # 履歴読み取り確認 → 1 件で時間測定 → 続行確認
-dora precache -y --limit 10  # 全自動
+helpdora precache --dry-run      # 候補一覧だけ確認
+helpdora precache                # 履歴読み取り確認 → 1 件で時間測定 → 続行確認
+helpdora precache -y --limit 10  # 全自動
 ```
 
 ## 4 つのモード
@@ -48,7 +48,7 @@ dora precache -y --limit 10  # 全自動
 
 - **SUMMARY / INTENT / FULL**: `<cmd> --help` → 失敗時 `man <cmd>` → `<cmd> -h` の順でローカルからヘルプを取得し、Markdown → ANSI にして表示
 - **LOOKUP**: 推奨コマンド・解説・注意点・代替案を構造化 JSON で取得。LLM が知らないコマンドは `get_help` ツールを自動で呼んで確認する
-- **キャッシュ**: LLM 応答を `~/.cache/dora/` に保存。2 回目以降は 1 秒以内。`--refresh` で上書き、`--no-cache` で無効化、`dora cache {list|clear|path}` で管理
+- **キャッシュ**: LLM 応答を `~/.cache/helpdora/` に保存。2 回目以降は 1 秒以内。`--refresh` で上書き、`--no-cache` で無効化、`helpdora cache {list|clear|path}` で管理
 - **ドラえもん口調 (`--dora`)**: 「〜だよ」「〜なんだ」調で説明（オプション）
 - **OpenAI 互換**: LM Studio / Ollama / vLLM / OpenAI 本家など、`--base-url` で切り替え可能
 
@@ -63,7 +63,7 @@ dora precache -y --limit 10  # 全自動
 ```bash
 pnpm install
 pnpm build
-pnpm link --global      # グローバルに `dora` コマンドを配置
+pnpm link --global      # グローバルに `helpdora` コマンドを配置
 ```
 
 ## 使い方
@@ -71,9 +71,9 @@ pnpm link --global      # グローバルに `dora` コマンドを配置
 ### SUMMARY (デフォルト)
 
 ```bash
-dora ls
-dora git commit
-dora docker compose up
+helpdora ls
+helpdora git commit
+helpdora docker compose up
 ```
 
 ### INTENT (コマンド + やりたいこと)
@@ -81,9 +81,9 @@ dora docker compose up
 引数の最後が空白や日本語を含むとタスクとして解釈されます。
 
 ```bash
-dora ls "サブディレクトリ全部見たい"
-dora git "直前のコミット取り消したい"
-dora rg "隠しファイル込みで grep"
+helpdora ls "サブディレクトリ全部見たい"
+helpdora git "直前のコミット取り消したい"
+helpdora rg "隠しファイル込みで grep"
 ```
 
 ### LOOKUP (逆引き)
@@ -91,20 +91,20 @@ dora rg "隠しファイル込みで grep"
 先頭がコマンドとして見つからない or `-p` 指定時。
 
 ```bash
-dora "tarで*.tgzを解凍"
-dora -p "podのログをフォロー" --ctx kubectl   # 事前にヘルプを注入して精度UP
-dora --no-tools -p "..."                     # LLM のヘルプ取得を無効化
+helpdora "tarで*.tgzを解凍"
+helpdora -p "podのログをフォロー" --ctx kubectl   # 事前にヘルプを注入して精度UP
+helpdora --no-tools -p "..."                     # LLM のヘルプ取得を無効化
 ```
 
 ### FULL (逐語訳)
 
 ```bash
-dora --full ls
-dora --full --raw awk     # 翻訳の下に原文も併記
-dora --full --man tar     # man を強制ソースに
+helpdora --full ls
+helpdora --full --raw awk     # 翻訳の下に原文も併記
+helpdora --full --man tar     # man を強制ソースに
 ```
 
-### プリキャッシュ (`dora precache`)
+### プリキャッシュ (`helpdora precache`)
 
 シェル履歴（`$HISTFILE` or `~/.zsh_history`）から頻出コマンド＋頻出サブコマンド pair を抽出し、SUMMARY を事前キャッシュします。オフライン前やデモ前に。
 
@@ -113,18 +113,18 @@ dora --full --man tar     # man を強制ソースに
 - **サブコマンド自動検出**: `git commit`, `mise use` などを頻度ベースで判定（誤検出避けに「3 種類以上の sub を観測」等のヒューリスティック）
 
 ```bash
-dora precache --dry-run                        # 一覧だけ
-dora precache --limit 10                       # 上位 10 件
-dora precache --tone dora                      # ドラえもん口調版をキャッシュ
-dora precache --mode full                      # 全オプション逐語訳もキャッシュ
-dora precache --all                            # default/dora × summary/full の 4 variants
-dora precache --history-file ~/.bash_history   # 別の履歴ファイルから
-dora --provider claude precache --tone dora    # claude 経由で事前キャッシュ (高級)
+helpdora precache --dry-run                        # 一覧だけ
+helpdora precache --limit 10                       # 上位 10 件
+helpdora precache --tone dora                      # ドラえもん口調版をキャッシュ
+helpdora precache --mode full                      # 全オプション逐語訳もキャッシュ
+helpdora precache --all                            # default/dora × summary/full の 4 variants
+helpdora precache --history-file ~/.bash_history   # 別の履歴ファイルから
+helpdora --provider claude precache --tone dora    # claude 経由で事前キャッシュ (高級)
 
 # 直接指定（履歴スキャンなし、許可プロンプトもなし）
-dora precache pup                              # pup + 自動検出 sub
-dora precache git diff                         # git diff の SUMMARY だけ
-dora precache pup --all                        # pup の 4 variants 全部
+helpdora precache pup                              # pup + 自動検出 sub
+helpdora precache git diff                         # git diff の SUMMARY だけ
+helpdora precache pup --all                        # pup の 4 variants 全部
 ```
 
 root の `--provider` / `--model` / `--base-url` は precache にも継承されます。同じコマンドでも provider ごとに別キャッシュが作られるので、`lm-studio` と `claude` を使い分ける運用も可能です。
@@ -134,37 +134,37 @@ root の `--provider` / `--model` / `--base-url` は precache にも継承され
 ```bash
 # fpath に置いてグローバル有効化（初回のみ）
 mkdir -p ~/.zfunc
-dora completion zsh > ~/.zfunc/_dora
+helpdora completion zsh > ~/.zfunc/_helpdora
 # ~/.zshrc に以下を追加（未設定なら）:
 #   fpath=(~/.zfunc $fpath)
 #   autoload -U compinit; compinit
 
 # 一時的に試すだけ
-eval "$(dora completion zsh)"
+eval "$(helpdora completion zsh)"
 ```
 
-`dora <TAB>` でサブコマンド補完、`--provider <TAB>` で `lm-studio / claude / codex` 補完、`dora cache <TAB>` で `list / clear / path`、など。
+`helpdora <TAB>` でサブコマンド補完、`--provider <TAB>` で `lm-studio / claude / codex` 補完、`helpdora cache <TAB>` で `list / clear / path`、など。
 
 ### Claude Code 用スキルをインストール
 
 ```bash
-dora install-skill
+helpdora install-skill
 ```
 
-`~/.claude/skills/dora/SKILL.md` を書き出し、Claude Code から `/dora <args>` として呼べるようになります。
+`~/.claude/skills/helpdora/SKILL.md` を書き出し、Claude Code から `/helpdora <args>` として呼べるようになります。
 
 ## 設定
 
 ### 環境変数（CLI 引数 > env > config.json > default）
 
-| 変数              | デフォルト                 | 説明                             |
-| ----------------- | -------------------------- | -------------------------------- |
-| `DORA_BASE_URL`   | `http://localhost:1234/v1` | OpenAI 互換エンドポイント        |
-| `DORA_API_KEY`    | `lm-studio`                | ダミー値。本家を使う場合は実キー |
-| `DORA_MODEL`      | `qwen3.5-9b`               | 使用モデル ID                    |
-| `DORA_TIMEOUT_MS` | `120000`                   | リクエストタイムアウト (ms)      |
+| 変数                  | デフォルト                 | 説明                             |
+| --------------------- | -------------------------- | -------------------------------- |
+| `HELPDORA_BASE_URL`   | `http://localhost:1234/v1` | OpenAI 互換エンドポイント        |
+| `HELPDORA_API_KEY`    | `lm-studio`                | ダミー値。本家を使う場合は実キー |
+| `HELPDORA_MODEL`      | `qwen3.5-9b`               | 使用モデル ID                    |
+| `HELPDORA_TIMEOUT_MS` | `120000`                   | リクエストタイムアウト (ms)      |
 
-### 設定ファイル (`~/.config/dora/config.json`)
+### 設定ファイル (`~/.config/helpdora/config.json`)
 
 ```json
 {
@@ -178,10 +178,10 @@ dora install-skill
 ### OpenAI 本家を使う例
 
 ```bash
-DORA_BASE_URL=https://api.openai.com/v1 \
-DORA_API_KEY=sk-xxx \
-DORA_MODEL=gpt-4o-mini \
-dora -p "..."
+HELPDORA_BASE_URL=https://api.openai.com/v1 \
+HELPDORA_API_KEY=sk-xxx \
+HELPDORA_MODEL=gpt-4o-mini \
+helpdora -p "..."
 ```
 
 ## 主なオプション
@@ -209,9 +209,9 @@ dora -p "..."
 `--provider claude` または `--provider codex` で、認証済みの `claude` / `codex` CLI を経由して **賢いモデル**で翻訳できます（特に `--dora` のトーン遵守が格段に良くなる）。
 
 ```bash
-dora --provider claude --dora ls
-dora --provider codex ls
-DORA_PROVIDER=claude dora ls          # env で固定
+helpdora --provider claude --dora ls
+helpdora --provider codex ls
+HELPDORA_PROVIDER=claude helpdora ls          # env で固定
 ```
 
 制約 (v1):

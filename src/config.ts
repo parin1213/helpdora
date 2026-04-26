@@ -29,21 +29,21 @@ const DEFAULTS: Config = {
 
 export function configPath(env: NodeJS.ProcessEnv = process.env): string {
   const xdg = env.XDG_CONFIG_HOME || join(homedir(), ".config");
-  return join(xdg, "dora", "config.json");
+  return join(xdg, "helpdora", "config.json");
 }
 
 export function loadConfig(cli: ConfigOverrides = {}, env: NodeJS.ProcessEnv = process.env): Config {
   const file = readConfigFile(configPath(env));
   const envCfg: Partial<Config> = {};
-  if (env.DORA_PROVIDER) {
-    const p = env.DORA_PROVIDER;
+  if (env.HELPDORA_PROVIDER) {
+    const p = env.HELPDORA_PROVIDER;
     if (p === "lm-studio" || p === "claude" || p === "codex") envCfg.provider = p;
   }
-  if (env.DORA_BASE_URL) envCfg.baseUrl = env.DORA_BASE_URL;
-  if (env.DORA_API_KEY) envCfg.apiKey = env.DORA_API_KEY;
-  if (env.DORA_MODEL) envCfg.model = env.DORA_MODEL;
-  if (env.DORA_TIMEOUT_MS) {
-    const n = Number(env.DORA_TIMEOUT_MS);
+  if (env.HELPDORA_BASE_URL) envCfg.baseUrl = env.HELPDORA_BASE_URL;
+  if (env.HELPDORA_API_KEY) envCfg.apiKey = env.HELPDORA_API_KEY;
+  if (env.HELPDORA_MODEL) envCfg.model = env.HELPDORA_MODEL;
+  if (env.HELPDORA_TIMEOUT_MS) {
+    const n = Number(env.HELPDORA_TIMEOUT_MS);
     if (Number.isFinite(n) && n > 0) envCfg.timeoutMs = n;
   }
 

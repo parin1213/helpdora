@@ -7,7 +7,7 @@ import { loadConfig } from "../src/config.js";
 let tmp: string;
 
 beforeEach(() => {
-  tmp = mkdtempSync(join(tmpdir(), "dora-cfg-"));
+  tmp = mkdtempSync(join(tmpdir(), "helpdora-cfg-"));
 });
 
 afterEach(() => {
@@ -27,43 +27,43 @@ describe("loadConfig", () => {
   });
 
   it("env overrides defaults", () => {
-    const cfg = loadConfig({}, env({ DORA_MODEL: "gpt-oss-20b" }));
+    const cfg = loadConfig({}, env({ HELPDORA_MODEL: "gpt-oss-20b" }));
     expect(cfg.model).toBe("gpt-oss-20b");
   });
 
   it("config file overrides defaults but not env", () => {
-    mkdirSync(join(tmp, "dora"), { recursive: true });
+    mkdirSync(join(tmp, "helpdora"), { recursive: true });
     writeFileSync(
-      join(tmp, "dora", "config.json"),
+      join(tmp, "helpdora", "config.json"),
       JSON.stringify({ model: "from-file", baseUrl: "http://file/v1" }),
     );
-    const cfg = loadConfig({}, env({ DORA_MODEL: "from-env" }));
+    const cfg = loadConfig({}, env({ HELPDORA_MODEL: "from-env" }));
     expect(cfg.model).toBe("from-env");
     expect(cfg.baseUrl).toBe("http://file/v1");
   });
 
   it("cli overrides everything", () => {
-    mkdirSync(join(tmp, "dora"), { recursive: true });
+    mkdirSync(join(tmp, "helpdora"), { recursive: true });
     writeFileSync(
-      join(tmp, "dora", "config.json"),
+      join(tmp, "helpdora", "config.json"),
       JSON.stringify({ model: "from-file" }),
     );
     const cfg = loadConfig(
       { model: "from-cli" },
-      env({ DORA_MODEL: "from-env" }),
+      env({ HELPDORA_MODEL: "from-env" }),
     );
     expect(cfg.model).toBe("from-cli");
   });
 
   it("ignores malformed config file", () => {
-    mkdirSync(join(tmp, "dora"), { recursive: true });
-    writeFileSync(join(tmp, "dora", "config.json"), "not json");
+    mkdirSync(join(tmp, "helpdora"), { recursive: true });
+    writeFileSync(join(tmp, "helpdora", "config.json"), "not json");
     const cfg = loadConfig({}, env());
     expect(cfg.model).toBe("qwen3.5-9b");
   });
 
   it("rejects non-positive timeout", () => {
-    const cfg = loadConfig({}, env({ DORA_TIMEOUT_MS: "-1" }));
+    const cfg = loadConfig({}, env({ HELPDORA_TIMEOUT_MS: "-1" }));
     expect(cfg.timeoutMs).toBe(120_000);
   });
 });

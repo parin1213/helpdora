@@ -48,13 +48,13 @@ type RootOptions = {
 const program = new Command();
 
 program
-  .name("dora")
+  .name("helpdora")
   .description("コマンドの要点・使い方・逆引きを日本語で返す CLI (LM Studio 互換)")
   .version(readVersion(), "-V, --version", "バージョンを表示")
   .helpOption("-h, --help", "このヘルプを表示")
   .argument(
     "[args...]",
-    "コマンド名 or 自然言語の要望 (例: `dora ls`, `dora git \"直前のコミット取り消し\"`, `dora \"tarで解凍\"`)",
+    "コマンド名 or 自然言語の要望 (例: `helpdora ls`, `helpdora git \"直前のコミット取り消し\"`, `helpdora \"tarで解凍\"`)",
   )
   .option("-p, --prompt <question>", "自然言語の質問からコマンドを逆引き (LOOKUP モードを明示)")
   .option("--full", "全オプションを逐語訳する FULL モード")
@@ -87,7 +87,7 @@ program
 
 program
   .command("install-skill")
-  .description("Claude Code 用のスキルファイル (~/.claude/skills/dora/SKILL.md) をインストール")
+  .description("Claude Code 用のスキルファイル (~/.claude/skills/helpdora/SKILL.md) をインストール")
   .option("-f, --force", "既存ファイルを上書きする")
   .option("--dir <path>", "スキルをインストールするディレクトリを上書き (default: ~/.claude/skills)")
   .allowExcessArguments(false)
@@ -100,14 +100,14 @@ program
   .command("precache")
   .argument(
     "[cmd-and-args...]",
-    "直接キャッシュ対象を指定 (例: `dora precache pup`, `dora precache git diff`)。" +
+    "直接キャッシュ対象を指定 (例: `helpdora precache pup`, `helpdora precache git diff`)。" +
       "指定時は履歴スキャンをスキップ。top-level のみ指定なら --auto-subs で sub も自動追加",
   )
   .description(
     "シェル履歴からトレンドのコマンドを抽出して事前キャッシュ、" +
       "または位置引数で対象を直接指定。" +
       "root の --provider / --model / --base-url を継承するので、" +
-      "`dora --provider claude precache` のように書いて別プロバイダで事前キャッシュできる",
+      "`helpdora --provider claude precache` のように書いて別プロバイダで事前キャッシュできる",
   )
   .option("-y, --yes", "履歴読み取りと時間確認を自動承認")
   .option("--dry-run", "一覧のみ表示、キャッシュしない")
@@ -187,7 +187,7 @@ program
       variants = [{ mode, tone }];
     }
     // Inherit root-level --provider / --model / --base-url so
-    // `dora --provider claude precache` behaves as expected.
+    // `helpdora --provider claude precache` behaves as expected.
     const cliCfg: ConfigOverrides = {};
     if (root?.provider) {
       if (root.provider !== "lm-studio" && root.provider !== "claude" && root.provider !== "codex") {
@@ -223,7 +223,7 @@ program
   .command("cache")
   .argument("<action>", "list | clear | path")
   .argument("[pattern]", "clear/list で部分一致フィルタ (例: `rg`, `summary--git`)")
-  .description("LLM レスポンスキャッシュ (~/.cache/dora) の管理")
+  .description("LLM レスポンスキャッシュ (~/.cache/helpdora) の管理")
   .allowExcessArguments(false)
   .action(async (action: string, pattern: string | undefined) => {
     const { cacheList, cacheClear, cachePath } = await import("./cache.js");

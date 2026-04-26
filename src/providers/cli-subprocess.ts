@@ -75,7 +75,7 @@ async function runClaude(prompt: string, timeoutMs: number): Promise<string> {
  *  stdin, writes the final assistant message to a temp file, which we read
  *  back. stdout gets cluttered with agent traces otherwise. */
 async function runCodex(prompt: string, timeoutMs: number): Promise<string> {
-  const dir = mkdtempSync(join(tmpdir(), "dora-codex-"));
+  const dir = mkdtempSync(join(tmpdir(), "helpdora-codex-"));
   const outFile = join(dir, "last.txt");
   try {
     const child = spawn(

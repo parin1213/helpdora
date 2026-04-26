@@ -265,6 +265,6 @@ function debugHook(debug: boolean | undefined) {
 
 export function writeSummaryFooter(cmd: string, args: readonly string[]): void {
   writeLine();
-  const full = ["dora", "--full", cmd, ...args].join(" ");
+  const full = ["helpdora", "--full", cmd, ...args].join(" ");
   writeDim(`詳細は \`${full}\``);
 }

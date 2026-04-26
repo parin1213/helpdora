@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 function cacheDir(env: NodeJS.ProcessEnv = process.env): string {
   const xdg = env.XDG_CACHE_HOME || join(homedir(), ".cache");
-  const dir = join(xdg, "dora");
+  const dir = join(xdg, "helpdora");
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return dir;
 }
