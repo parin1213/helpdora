@@ -60,10 +60,20 @@ helpdora precache -y --limit 10  # 全自動
 
 ## インストール
 
+利用者向け:
+
+```bash
+npm i -g helpdora                  # npm
+pnpm add -g helpdora               # pnpm
+mise use -g npm:helpdora@latest    # mise
+```
+
+ソースからの開発インストール:
+
 ```bash
 pnpm install
 pnpm build
-pnpm link --global      # グローバルに `helpdora` コマンドを配置
+pnpm link --global      # ローカルビルドを `helpdora` として PATH に置く
 ```
 
 ## 使い方
