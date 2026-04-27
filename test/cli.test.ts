@@ -8,7 +8,6 @@ const CLI = [process.execPath, "--import", "tsx", "src/cli.ts"];
 
 function run(args: string[]): { stdout: string; stderr: string; code: number } {
   const result = spawnSync(CLI[0]!, [...CLI.slice(1), ...args], {
-    cwd: "C:\\dev\\src\\dora",
     encoding: "utf8",
     timeout: 15_000,
   });

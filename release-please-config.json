@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "3644cb13d87535fe016cd5e18d9ce8251a029a13",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "helpdora",
+      "include-v-in-tag": true
+    }
+  }
+}
