@@ -3,7 +3,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import type {
   ChatCompletionMessageParam,
   ChatCompletionTool,
-  ChatCompletionMessageToolCall,
+  ChatCompletionMessageFunctionToolCall,
 } from "openai/resources/chat/completions.js";
 import type { z } from "zod";
 import type { Config } from "./config.js";
@@ -28,7 +28,7 @@ export type StructuredOptions<T extends z.ZodTypeAny> = {
   schema: T;
   schemaName: string;
   tools?: ChatCompletionTool[];
-  handleTool?: (call: ChatCompletionMessageToolCall) => Promise<string>;
+  handleTool?: (call: ChatCompletionMessageFunctionToolCall) => Promise<string>;
   maxToolCalls?: number;
   debug?: DebugHook;
 };
@@ -146,6 +146,8 @@ export class Dora {
         });
 
         for (const call of toolCalls) {
+          // helpdora は function tool しか登録していないので custom tool は無視。
+          if (call.type !== "function") continue;
           const result = await opts.handleTool(call);
           opts.debug?.onToolCall?.({
             name: call.function.name,
@@ -166,10 +168,10 @@ export class Dora {
     // giving up. Empirically fixes most transient INTENT failures.
     const MAX_RETRIES = 2;
     let parsed: z.infer<T> | null = null;
-    let lastRes: Awaited<ReturnType<typeof this.client.beta.chat.completions.parse>> | null = null;
+    let lastRes: Awaited<ReturnType<typeof this.client.chat.completions.parse>> | null = null;
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       opts.debug?.onStart?.({ messages: working, model: this.cfg.model });
-      const res = await this.client.beta.chat.completions.parse({
+      const res = await this.client.chat.completions.parse({
         model: this.cfg.model,
         messages: working,
         response_format: zodResponseFormat(opts.schema, opts.schemaName),
