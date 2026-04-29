@@ -47,4 +47,4 @@ describe("fetchHelp", () => {
     expect(result.cmd).toBe("zoxide");
     expect(result.text.length).toBeGreaterThan(50);
   });
-}, { timeout: 15_000 });
+}, 15_000);

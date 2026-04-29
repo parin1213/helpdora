@@ -77,4 +77,4 @@ describe("cli", () => {
       rmSync(tmp, { recursive: true, force: true });
     }
   });
-}, { timeout: 30_000 });
+}, 30_000);
