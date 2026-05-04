@@ -42,7 +42,7 @@
     "commander": "^14.0.3",
     "openai": "^6.35.0",
     "picocolors": "^1.1.1",
-    "zod": "^3.25.0"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
