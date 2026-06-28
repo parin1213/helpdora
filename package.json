@@ -27,7 +27,7 @@
     "dist"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "tsx src/cli.ts",
@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "cli-highlight": "^2.1.11",
-    "commander": "^14.0.3",
+    "commander": "^15.0.0",
     "openai": "^6.35.0",
     "picocolors": "^1.1.1",
     "zod": "^4.4.3"
