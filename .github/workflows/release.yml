@@ -3,6 +3,9 @@ name: Release
 on:
   push:
     branches: [main]
+  # 既存タグの publish が失敗したときの手動リカバリ用。
+  # main の package.json の version をそのまま npm に publish する。
+  workflow_dispatch: {}
 
 permissions:
   contents: write
@@ -10,34 +13,35 @@ permissions:
   id-token: write
 
 jobs:
-  release:
+  release-please:
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
     steps:
       - uses: googleapis/release-please-action@v5
         id: release
 
+  publish:
+    needs: release-please
+    # release PR がマージされて新リリースが作られたとき、または手動トリガ時に publish する。
+    if: ${{ needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/checkout@v7
-        if: ${{ steps.release.outputs.release_created }}
       - uses: pnpm/action-setup@v6
-        if: ${{ steps.release.outputs.release_created }}
         with:
           version: 10.33.2
       - uses: actions/setup-node@v6
-        if: ${{ steps.release.outputs.release_created }}
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           registry-url: 'https://registry.npmjs.org'
-
+      # npm の Trusted Publishing (tokenless OIDC) は npm >= 11.5.1 が必要。
+      # node 同梱 npm では足りないことがあるため最新へ上げる。pnpm publish は OIDC 非対応のため publish のみ npm CLI を使う。
+      - run: npm install -g npm@latest
       - run: pnpm install --frozen-lockfile
-        if: ${{ steps.release.outputs.release_created }}
       - run: pnpm typecheck
-        if: ${{ steps.release.outputs.release_created }}
       - run: pnpm test
-        if: ${{ steps.release.outputs.release_created }}
       - run: pnpm build
-        if: ${{ steps.release.outputs.release_created }}
-      - run: pnpm publish --access public --no-git-checks
-        if: ${{ steps.release.outputs.release_created }}
-        env:
-          NPM_CONFIG_PROVENANCE: 'true'
+      # トークン不要。id-token: write ＋ npm 側 Trusted Publisher 設定で OIDC 認証され、provenance も付与される。
+      - run: npm publish --provenance --access public
