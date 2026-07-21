@@ -179,7 +179,8 @@ export class Dora {
       lastRes = res;
       const got = res.choices[0]?.message.parsed;
       if (got != null) {
-        parsed = got;
+        // openai 6.48 の parsed は InferZodType 型で、generic T のままでは z.infer<T> と単一化できない
+        parsed = got as z.infer<T>;
         break;
       }
       opts.debug?.onTokenStats?.({
