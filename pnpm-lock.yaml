@@ -18,8 +18,8 @@ importers:
         specifier: ^15.0.0
         version: 15.0.0
       openai:
-        specifier: ^6.35.0
-        version: 6.48.0(zod@4.6.5)
+        specifier: ^7.30.1
+        version: 7.30.1(zod@4.6.5)
       picocolors:
         specifier: ^1.1.1
         version: 1.1.1
@@ -1023,13 +1023,15 @@ packages:
     resolution: {integrity: sha512-XrsrhT5sybtKI6wakr2SPOlGZWWYbUXZ7a0jT8/QOeAPau+1X/bSegNe5YR75oJmEZQbKningirmGOEJCIk61Q==}
     engines: {node: '>=12.20.0'}
 
-  openai@6.48.0:
-    resolution: {integrity: sha512-KhVp+FyV50QrXNextvL9hIU5l6ox5HYuKQjGVk7lIqprgJol90+dQXWONV6S1lRWsKA1bXjrow8RsUT14M1hNA==}
+  openai@7.30.1:
+    resolution: {integrity: sha512-YgiPjBgXdItqTsgAR138bu9aHxBb3/L7qiiP8ucU8e9msRfF8cjRtp8y5qYW7E3Oe9O8UWejQZERf37dtdvoTg==}
+    engines: {node: '>=22.0.0'}
     peerDependencies:
       '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
       '@smithy/hash-node': '>=4.3.0 <5'
       '@smithy/signature-v4': '>=5.4.0 <6'
-      ws: ^8.18.0
+      undici: '>=5 <9'
+      ws: ^8.21.0
       zod: ^3.25 || ^4.0
     peerDependenciesMeta:
       '@aws-sdk/credential-provider-node':
@@ -1037,6 +1039,8 @@ packages:
       '@smithy/hash-node':
         optional: true
       '@smithy/signature-v4':
+        optional: true
+      undici:
         optional: true
       ws:
         optional: true
@@ -1941,7 +1945,7 @@ snapshots:
 
   obug@2.2.1: {}
 
-  openai@6.48.0(zod@4.6.5):
+  openai@7.30.1(zod@4.6.5):
     optionalDependencies:
       zod: 4.6.5
 
