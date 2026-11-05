@@ -54,11 +54,20 @@ helpdora precache -y --limit 10  # 全自動
 
 ## 前提
 
-- Node.js 20 以上
+- Node.js 24 以上（公式サポート中の LTS 版を使用してください）。Node.js 20 / 22 は helpdora のサポート対象外です。
 - [LM Studio](https://lmstudio.ai/) が `http://localhost:1234/v1` で稼働（他のエンドポイントでも可）
 - ローカルにロード済みモデル（tool-calling を使うなら function calling 対応モデル推奨）
 
 ## インストール
+
+### 1.0.0 への移行（破壊的変更）
+
+- 実行環境を Node.js 24 以上に変更します。Node.js 20 は公式 EOL のため未サポートです。Node.js 22 も helpdora のサポート対象から外れます（Node.js 自体の公式 LTS 状態とは別です）。更新前に `node --version` を確認し、公式サポート中の Node.js 24 以上の LTS 版へ更新してください。
+- Commander 15 / OpenAI SDK 7 / Zod 4 を使用します。開発用の pnpm は 10.33.2 に統一します。設定・環境変数・キャッシュの保存先と CLI の名前は維持します。
+- INTENT / LOOKUP の構造化回答では `caveats`・`sources`・`alternatives` を各 128 件までに制限します。上限を超える回答は拒否し、古い不正なキャッシュは通常どおり再生成します。
+- Zod の最低バージョンを 4.6.6 に上げ、上限の検査を要素検証より前に行います。これは [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) の大量エラー生成に対する対策です。HTTP 応答サイズや JSON 全体のメモリー使用量を制限するものではありません。
+
+Node.js の公式サポート状態は [Node.js Releases](https://nodejs.org/en/about/previous-releases) を確認してください。2026-11-05 時点では Node.js 20 は EOL、24 / 26 は LTS です。
 
 利用者向け:
 
